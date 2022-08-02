@@ -10,7 +10,7 @@ const CPU_MODELS = [
     eCores: '8-15',
     allCores: '0-15',
     lowPowerCores: '8-15',
-    runOnBattery: '/usr/sbin/set_power_limit 2 10',
+    runOnBattery: '/usr/sbin/set_power_limit 4 20',
     runOnAC: '/usr/sbin/set_power_limit 40 65',
   },
   {
@@ -20,7 +20,7 @@ const CPU_MODELS = [
     eCores: '8-15',
     allCores: '0-15',
     lowPowerCores: '8-15',
-    runOnBattery: '/usr/sbin/set_power_limit 2 10',
+    runOnBattery: '/usr/sbin/set_power_limit 4 20',
     runOnAC: '/usr/sbin/set_power_limit 40 65',
   },
   {
@@ -30,7 +30,7 @@ const CPU_MODELS = [
     eCores: '12-19',
     allCores: '0-19',
     lowPowerCores: '12-19',
-    runOnBattery: '/usr/sbin/set_power_limit 2 10',
+    runOnBattery: '/usr/sbin/set_power_limit 4 20',
     runOnAC: '/usr/sbin/set_power_limit 40 65',
   },
 ];
@@ -58,16 +58,16 @@ function setup() {
     mount -t cgroup -o cpuset cpuset /sys/fs/cgroup/cpuset;
     
     cgcreate -g cpuset:p_cores;
-    echo ${CPU_MODEL.pCores} > /sys/fs/cgroup/cpuset/p_cores/cpus;
-    echo 0 > /sys/fs/cgroup/cpuset/p_cores/mems;
+    echo ${CPU_MODEL.pCores} > /sys/fs/cgroup/cpuset/p_cores/cpuset.cpus;
+    echo 0 > /sys/fs/cgroup/cpuset/p_cores/cpuset.mems;
     
     cgcreate -g cpuset:e_cores;
-    echo ${CPU_MODEL.eCores} > /sys/fs/cgroup/cpuset/e_cores/cpus;
-    echo 0 > /sys/fs/cgroup/cpuset/e_cores/mems;
+    echo ${CPU_MODEL.eCores} > /sys/fs/cgroup/cpuset/e_cores/cpuset.cpus;
+    echo 0 > /sys/fs/cgroup/cpuset/e_cores/cpuset.mems;
 
     cgcreate -g cpuset:active_cores;
-    echo ${CPU_MODEL.allCores} > /sys/fs/cgroup/cpuset/active_cores/cpus;
-    echo 0 > /sys/fs/cgroup/cpuset/active_cores/mems;
+    echo ${CPU_MODEL.allCores} > /sys/fs/cgroup/cpuset/active_cores/cpuset.cpus;
+    echo 0 > /sys/fs/cgroup/cpuset/active_cores/cpuset.mems;
   `).catch(() => {});
 
   /**
@@ -86,7 +86,7 @@ detectCPU();
 
 function setLowPowerMode(enabled) {
   exec(`
-    echo ${enabled ? CPU_MODEL.lowPowerCores : CPU_MODEL.allCores} > /sys/fs/cgroup/cpuset/active_cores/cpus;
+    echo ${enabled ? CPU_MODEL.lowPowerCores : CPU_MODEL.allCores} > /sys/fs/cgroup/cpuset/active_cores/cpuset.cpus;
     for pid in $(ps -eLo pid) ; do cgclassify -g cpuset:active_cores $pid 2>/dev/null; done;
   `).catch(() => {});
 
