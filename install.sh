@@ -1,5 +1,22 @@
 #!/bin/sh
 
+verifyAppInstalled() {
+  toolName=$1
+  if ! command -v "$toolName" &> /dev/null; then
+    echo "Required app '${toolName}' is not installed"
+    exit 1
+  fi
+}
+
+# verification
+verifyAppInstalled 'devmem2'
+verifyAppInstalled 'rdmsr'
+verifyAppInstalled 'wrmsr'
+verifyAppInstalled 'turbostat'
+verifyAppInstalled 'setpci'
+verifyAppInstalled 'powertop'
+verifyAppInstalled 'cgcreate'
+
 # install binary
 npm run build
 sudo systemctl stop frmw.service
