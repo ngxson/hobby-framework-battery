@@ -1,10 +1,10 @@
 const exec = require('promised-exec');
 const path = require('path');
 
-const binaryPath = path.join(__dirname, './notification.sh');
+const notifySend = (uid, title, desc) => `sudo -u "$(id -nu ${uid})" DBUS_SESSION_BUS_ADDRESS=unix:path=/run/user/${uid}/bus notify-send "${title}" "${desc}"`;
 
 function send(text) {
-  exec(`${binaryPath} 1000 "${text}" "${(new Date).toISOString()}"`)
+  exec(notifySend(1000, text, (new Date).toISOString()))
     .catch(() => { /* ignored */ });
 }
 

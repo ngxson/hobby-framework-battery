@@ -4,11 +4,14 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "bundle": "browserify --node --ignore-missing index.js > bundle.js",
+    "build": "npm run bundle && nexe --target linux-x64-14.15.3 --input bundle.js --output frmw-service"
   },
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "browserify": "^17.0.0",
+    "nexe": "^4.0.0-rc.1",
     "promised-exec": "^1.0.1"
   }
 }
