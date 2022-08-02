@@ -28,6 +28,11 @@ sudo chmod 744 /usr/sbin/frmw-service
 sudo cp ./set_power_limit /usr/sbin/set_power_limit
 sudo chmod +x /usr/sbin/set_power_limit
 
+# install rule
+sudo cp ./systemd/90-frmw.rules /etc/udev/rules.d/90-frmw.rules
+sudo chmod 644 ./systemd/90-frmw.rules /etc/udev/rules.d/90-frmw.rules
+sudo chown root:root ./systemd/90-frmw.rules /etc/udev/rules.d/90-frmw.rules
+
 # install systemd unit
 sudo cp ./systemd/frmw.service /etc/systemd/system/frmw.service
 sudo chmod 644 /etc/systemd/system/frmw.service
