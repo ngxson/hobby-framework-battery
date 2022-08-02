@@ -9,7 +9,10 @@ const delay = (ms) => new Promise(r => setTimeout(r, ms));
 
 async function onBatteryStatusChanged(callback) {
   let lastStatus = -1;
-  const handler = () => {
+  exec('udevadm trigger -s power_supply');
+
+  const handler = async () => {
+    await delay(1000);
     if (fs.existsSync(POWER_SUPPLY_PATH)) {
       const status = fs.readFileSync(POWER_SUPPLY_PATH).toString().match(/1/)
         ? CHARGING : DISCHARGING;
@@ -20,10 +23,9 @@ async function onBatteryStatusChanged(callback) {
     }
   };
 
-  handler();
   // wait until we can watch
   while (true) {
-    await delay(6000);
+    await delay(5000);
     if (!fs.existsSync(POWER_SUPPLY_PATH)) continue;
     fs.watch(POWER_SUPPLY_PATH, handler);
     handler();
