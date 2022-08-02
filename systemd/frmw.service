@@ -1,0 +1,11 @@
+[Unit]
+Description=Framework Laptop
+
+[Service]
+User=root
+ExecStart=/usr/sbin/frmw-service
+Restart=always
+
+[Install]
+WantedBy=multi-user.target
+
