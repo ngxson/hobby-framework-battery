@@ -1,5 +1,6 @@
 const battery = require('./battery');
 const cpu = require('./plugins/cpu');
+const powertop = require('./plugins/powertop');
 const notification = require('./notification');
 
 function start() {
@@ -9,6 +10,7 @@ function start() {
     notification.send(noti);
     console.log(noti);
     cpu.setLowPowerMode(isBattery);
+    powertop.autoTune();
   });
   
   console.log('Service is running...');

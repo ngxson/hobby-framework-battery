@@ -16,6 +16,7 @@ verifyAppInstalled 'turbostat'
 verifyAppInstalled 'setpci'
 verifyAppInstalled 'powertop'
 verifyAppInstalled 'cgcreate'
+verifyAppInstalled 'udevadm'
 
 # install binary
 npm run build
@@ -25,7 +26,7 @@ sudo chown root:root /usr/sbin/frmw-service
 sudo chmod 744 /usr/sbin/frmw-service
 
 # install set_power_limit
-sudo cp ./set_power_limit /usr/sbin/set_power_limit
+sudo cp ./bin/set_power_limit /usr/sbin/set_power_limit
 sudo chmod +x /usr/sbin/set_power_limit
 
 # install rule

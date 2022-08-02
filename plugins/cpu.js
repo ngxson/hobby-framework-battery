@@ -10,8 +10,8 @@ const CPU_MODELS = [
     eCores: '8-15',
     allCores: '0-15',
     lowPowerCores: '8-15',
-    runOnBattery: '/usr/sbin/set_power_limit 4 20',
-    runOnAC: '/usr/sbin/set_power_limit 40 65',
+    powerLimitsBattery: { PL1: 4, PL2: 20 },
+    powerLimitsAC: { PL1: 40, PL2: 65 },
   },
   {
     name: 'i7-1260P',
@@ -20,8 +20,8 @@ const CPU_MODELS = [
     eCores: '8-15',
     allCores: '0-15',
     lowPowerCores: '8-15',
-    runOnBattery: '/usr/sbin/set_power_limit 4 20',
-    runOnAC: '/usr/sbin/set_power_limit 40 65',
+    powerLimitsBattery: { PL1: 4, PL2: 20 },
+    powerLimitsAC: { PL1: 40, PL2: 65 },
   },
   {
     name: 'i7-1280P',
@@ -30,8 +30,8 @@ const CPU_MODELS = [
     eCores: '12-19',
     allCores: '0-19',
     lowPowerCores: '12-19',
-    runOnBattery: '/usr/sbin/set_power_limit 4 20',
-    runOnAC: '/usr/sbin/set_power_limit 40 65',
+    powerLimitsBattery: { PL1: 4, PL2: 20 },
+    powerLimitsAC: { PL1: 40, PL2: 65 },
   },
 ];
 
@@ -85,14 +85,27 @@ function setup() {
 detectCPU();
 
 function setLowPowerMode(enabled) {
+  // change cpuset cpus
   exec(`
     echo ${enabled ? CPU_MODEL.lowPowerCores : CPU_MODEL.allCores} > /sys/fs/cgroup/cpuset/active_cores/cpuset.cpus;
     for pid in $(ps -eLo pid) ; do cgclassify -g cpuset:active_cores $pid 2>/dev/null; done;
-  `).catch(() => {});
+  `);
 
+  // power limit
+  const { PL1, PL2 } = enabled ? CPU_MODEL.powerLimitsBattery : CPU_MODEL.powerLimitsAC;
   exec(
-    enabled ? CPU_MODEL.runOnBattery : CPU_MODEL.runOnAC
-  ).catch(() => {});
+    `/usr/sbin/set_power_limit ${PL1} ${PL2}`
+  );
+
+  // disable/enable cores
+  // not used because it doesn't affect power consumption
+  /*const FROM_CORE = 2;
+  const TO_CORE = parseInt(CPU_MODEL.lowPowerCores.split('-')[0]);
+  const cmd = [];
+  for (let i = FROM_CORE; i < TO_CORE; i++) {
+    cmd.push(`echo ${enabled ? 0 : 1} > /sys/devices/system/cpu/cpu${i}/online`);
+  }
+  exec(cmd.join(';'));*/
 }
 
 module.exports = {
