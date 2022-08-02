@@ -1,14 +1,14 @@
 const battery = require('./battery');
-const cpu = require('./cpu');
+const cpu = require('./plugins/cpu');
 const notification = require('./notification');
 
 function start() {
   battery.onBatteryStatusChanged((status) => {
-    notification.send(`FRMW: ${status === battery.CHARGING ? 'Charging' : 'On battery'}`);
-
-    const optionalCoresEnabled = status === battery.CHARGING;
-    console.log('optionalCoresEnabled', optionalCoresEnabled);
-    cpu.setOptionalCores(optionalCoresEnabled);
+    const isBattery = status === battery.DISCHARGING;
+    const noti = `FRMW: ${isBattery ? 'On battery' : 'Charging'}`;
+    notification.send(noti);
+    console.log(noti);
+    cpu.setLowPowerMode(isBattery);
   });
   
   console.log('Service is running...');
