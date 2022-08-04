@@ -86,38 +86,65 @@ function setup() {
    * Since we cannot set cpu_exclusive for cpuset,
    * we need to re-assign process to active_cores set periodically
    */
-  const REASSIGN_AFTER_MS = 10 * 60000; // 10 minutes
-  setInterval(() => {
-    exec(`
-      for pid in $(ps -eLo pid) ; do cgclassify -g cpuset:active_cores $pid 2>/dev/null; done;
-    `).catch(() => {});
-  }, REASSIGN_AFTER_MS);
+  const REASSIGN_AFTER_MS = 60000; // every 1 minute
+  setInterval(reassignNewProcesses, REASSIGN_AFTER_MS);
+}
+
+let lastReassignedPID = 1;
+let maxPID = null;
+const generateArray = (start, end) => Array.from(Array(end - start).keys()).map(i => i + start);
+const STORED_LAST_PID_PATH = '/tmp/frmw_last_reassigned_pid';
+function makeChunks(arr, len) {
+  let chunks = [], i = 0, n = arr.length;
+  while (i < n) chunks.push(arr.slice(i, i += len));
+  return chunks;
+}
+async function reassignNewProcesses() {
+  // This function reassign newly created processes to active_cores cpuset
+  // The idea is that, we try generating a PID and reassign all processes from lastReassignedPID to the latest PID
+  // See more: https://www.baeldung.com/linux/process-id
+  if (fs.existsSync(STORED_LAST_PID_PATH)) // what if we restart the service?
+    lastReassignedPID = parseInt(fs.readFileSync(STORED_LAST_PID_PATH).toString());
+  if (!maxPID) // read the max PID possible. usually be 2^22
+    maxPID = parseInt(fs.readFileSync('/proc/sys/kernel/pid_max').toString());
+  const latestPID = parseInt((await exec('echo $$')).trim());
+  let pids = [];
+  if (lastReassignedPID < latestPID) {
+    // all processes from last to current
+    pids = generateArray(lastReassignedPID, latestPID);
+  } else if (latestPID < lastReassignedPID) {
+    // in case the system already reached maxPID and wrap the number around
+    pids = [...generateArray(1, latestPID), ...generateArray(lastReassignedPID, maxPID)];
+  }
+  //console.log('reassignNewProcesses', lastReassignedPID, latestPID);
+  lastReassignedPID = latestPID + 1;
+  // reassign to active_cores
+  if (pids.length < 1000) {
+    try { await exec(
+      pids.map(p => `cgclassify -g cpuset:active_cores ${p} 2>/dev/null`).join(';')
+    ); } catch (e) { /* ignored */ }
+  } else {
+    try { await exec(
+      'for pid in $(ps -eLo pid) ; do cgclassify -g cpuset:active_cores $pid 2>/dev/null; done;'
+    ); } catch (e) { /* ignored */ }
+  }
+  fs.writeFileSync(STORED_LAST_PID_PATH, lastReassignedPID.toString());
 }
 
 detectCPU();
 
-function setLowPowerMode(enabled) {
+async function setLowPowerMode(enabled) {
   // change cpuset cpus
-  exec(`
+  await exec(`
     echo ${enabled ? CPU.lowPowerCores : CPU.allCores} > /sys/fs/cgroup/cpuset/active_cores/cpuset.cpus;
-    for pid in $(ps -eLo pid) ; do cgclassify -g cpuset:active_cores $pid 2>/dev/null; done;
   `);
+  reassignNewProcesses();
 
   // power limit
   const { PL1, PL2 } = enabled ? CPU.powerLimitsBattery : CPU.powerLimitsAC;
   exec(
     `/usr/sbin/set_power_limit ${PL1} ${PL2}`
   );
-
-  // disable/enable cores
-  // not used because it doesn't affect power consumption
-  /*const FROM_CORE = 2;
-  const TO_CORE = parseInt(CPU.lowPowerCores.split('-')[0]);
-  const cmd = [];
-  for (let i = FROM_CORE; i < TO_CORE; i++) {
-    cmd.push(`echo ${enabled ? 0 : 1} > /sys/devices/system/cpu/cpu${i}/online`);
-  }
-  exec(cmd.join(';'));*/
 }
 
 module.exports = {

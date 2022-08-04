@@ -78,7 +78,7 @@ function start() {
       cpu.patchCPUModelConfig(newConfig);
       cpu.setLowPowerMode(battery.getStatus() === battery.DISCHARGING);
     }
-    res.redirect(302, '/cpu');
+    setTimeout(() => res.redirect(302, '/cpu'), 2000);
   });
 }
 

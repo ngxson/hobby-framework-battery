@@ -39,7 +39,7 @@ To uninstall, simply run `./uninstall.sh` then reboot your laptop.
 - ~~Add notification on KDE~~ no need, since you can see the status via web interface
 - ~~Add option for forcing AC mode on battery~~
 - Limit charging (both start and end values)
-- Better algorithm for moving processes among cores
+- ~~Better algorithm for moving processes among cores~~
 
 ## POCs
 

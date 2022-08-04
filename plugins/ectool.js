@@ -27,7 +27,7 @@ function applySettings(cfg, save, opt={}) {
   if (save) config.setConfig('ectool', cfg);
 
   if (!chargingLimitEnable)
-    applyChargingLimit(opt.chargeLimit || 100);
+    if (opt.chargeLimit) applyChargingLimit(opt.chargeLimit);
   else
     updateBatteryStatus();
 }
