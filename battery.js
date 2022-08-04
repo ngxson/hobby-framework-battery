@@ -20,6 +20,10 @@ function getStatus() {
     ? DISCHARGING : CHARGING;
 }
 
+function getPercent() {
+  return parseInt(fs.readFileSync(`${getBatteryPath()}/capacity`));
+}
+
 async function onBatteryStatusChanged(callback) {
   let lastStatus = -1;
   exec('udevadm trigger -s power_supply');
@@ -50,4 +54,5 @@ module.exports = {
   DISCHARGING,
   onBatteryStatusChanged,
   getStatus,
+  getPercent,
 };

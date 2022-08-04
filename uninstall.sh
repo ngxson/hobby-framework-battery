@@ -5,8 +5,9 @@ sudo systemctl stop frmw.service
 sudo systemctl disable frmw.service
 sudo rm /usr/sbin/frmw-service
 
-# uninstall set_power_limit
+# uninstall binaries
 sudo rm /usr/sbin/set_power_limit
+sudo rm /usr/sbin/frmw_ectool
 
 # uninstall systemd unit
 sudo rm /etc/systemd/system/frmw.service

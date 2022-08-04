@@ -20,7 +20,7 @@ verifyAppInstalled 'udevadm'
 
 # install binary
 npm run build
-sudo systemctl stop frmw.service
+sudo systemctl stop frmw.service 2>/dev/null
 sudo cp frmw-service /usr/sbin/frmw-service
 sudo chown root:root /usr/sbin/frmw-service
 sudo chmod 744 /usr/sbin/frmw-service
@@ -28,6 +28,10 @@ sudo chmod 744 /usr/sbin/frmw-service
 # install set_power_limit
 sudo cp ./bin/set_power_limit /usr/sbin/set_power_limit
 sudo chmod +x /usr/sbin/set_power_limit
+
+# install frmw_ectool
+sudo cp ./bin/frmw_ectool /usr/sbin/frmw_ectool
+sudo chmod +x /usr/sbin/frmw_ectool
 
 # install rule
 sudo cp ./systemd/90-frmw.rules /etc/udev/rules.d/90-frmw.rules

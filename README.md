@@ -1,8 +1,10 @@
 # Framework Laptop battery tuning service on Linux (Intel 12th)
 
-**IMPORTANT NOTICE**: This service is in very early development phase and can be unstable. Currently, I can only test it on Fedora 36.
+**IMPORTANT NOTICE**: This service is in very early development phase and can be unstable. Currently, I can only test it on Fedora 36. It should also work on Ubuntu.
 
 Support only Framework Laptop with **Intel 12th gen** CPU.
+
+This is **not** a replacement for `tlp`. It is recommended to use this service with `tlp`.
 
 ## Install
 
@@ -19,7 +21,10 @@ npm i
 ./install.sh
 ```
 
-Optionally, you can disable Secure Boot for changing power limit.
+Optionally, you can disable Secure Boot for changing power limit.  
+After having installed, you can access the web interface via http://localhost:1515
+
+To uninstall, simply run `./uninstall.sh` then reboot your laptop.
 
 ## Features
 
@@ -34,6 +39,7 @@ Optionally, you can disable Secure Boot for changing power limit.
 - ~~Add notification on KDE~~ no need, since you can see the status via web interface
 - ~~Add option for forcing AC mode on battery~~
 - Limit charging (both start and end values)
+- Better algorithm for moving processes among cores
 
 ## POCs
 

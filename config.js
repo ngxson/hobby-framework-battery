@@ -2,8 +2,17 @@ const fs = require('fs');
 
 const CFG_PATH = '/etc/frmw-service-config.json';
 let config = {
-  cpu: {},
-  ectool: {},
+  cpu: {
+    // lowPowerCores: '8-15',
+    // powerLimitsBattery: { PL1: 4, PL2: 20 },
+    // powerLimitsAC: { PL1: 40, PL2: 65 },
+  },
+  ectool: {
+    // chargingLimitEnable: true,
+    // chargingLimitStart: 20,
+    // chargingLimitEnd: 80,
+    // keyRemaps: [ { from: '', to: '' } ],
+  },
 };
 
 const writeConfigToFile = () => {
