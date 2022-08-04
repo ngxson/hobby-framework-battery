@@ -40,8 +40,8 @@ const getHTMLContent = async () => {
       <br/>
 
       Status: <select value="${chargingLimitEnable ? 1 : 0}" name="chargingLimitEnable">
-                <option value="1">ON</option>
                 <option value="0">OFF</option>
+                <option value="1">ON</option>
               </select><br/>
       Start charging from (%): <input type="number" name="chargingLimitStart" value="${chargingLimitStart}" /> (minimum=20%)<br/>
       Stop charging at (%): <input type="number" name="chargingLimitEnd" value="${chargingLimitEnd}" />
