@@ -88,7 +88,7 @@ function forceStartCharging() {
 }
 
 function disableCharging() {
-  applySettings({ chargingLimitEnable: false }, true, { chargeLimit: 5 });
+  applySettings({ chargingLimitEnable: false }, true, { chargeLimit: 20 });
 }
 
 function enableCharging() {
