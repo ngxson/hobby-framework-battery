@@ -15,6 +15,11 @@ const getBatteryPath = () => {
 };
 const BATTERY_STATUS_PATH = `${getBatteryPath()}/status`;
 
+function getStatus() {
+  return fs.readFileSync(BATTERY_STATUS_PATH).toString().match(/disch/i)
+    ? DISCHARGING : CHARGING;
+}
+
 async function onBatteryStatusChanged(callback) {
   let lastStatus = -1;
   exec('udevadm trigger -s power_supply');
@@ -22,8 +27,7 @@ async function onBatteryStatusChanged(callback) {
   const handler = async () => {
     await delay(1000);
     if (fs.existsSync(POWER_SUPPLY_PATH)) {
-      const status = fs.readFileSync(BATTERY_STATUS_PATH).toString().match(/disch/i)
-        ? DISCHARGING : CHARGING;
+      const status = getStatus();
       if (status !== lastStatus) callback(status);
       lastStatus = status;
     } else {
@@ -45,4 +49,5 @@ module.exports = {
   CHARGING,
   DISCHARGING,
   onBatteryStatusChanged,
+  getStatus,
 };

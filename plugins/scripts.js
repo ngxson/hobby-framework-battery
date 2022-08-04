@@ -1,6 +1,9 @@
 const fs = require('fs');
+
+// libraries can be called from custom script
 const notification = require('../notification');
 const exec = require('promised-exec');
+const axios = require('axios').default;
 
 const SCRIPT_ON_START = 'start.js';
 const SCRIPT_ON_BATTERY = 'battery.js';

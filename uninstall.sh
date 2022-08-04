@@ -11,4 +11,9 @@ sudo rm /usr/sbin/set_power_limit
 # uninstall systemd unit
 sudo rm /etc/systemd/system/frmw.service
 
+echo ""
 echo "Done. Please reboot your computer"
+echo ""
+echo "Optionally, you can delete those files:"
+echo "/etc/frmw-scripts/*"
+echo "/etc/frmw-service-config.json"

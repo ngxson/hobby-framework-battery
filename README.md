@@ -21,20 +21,19 @@ npm i
 
 Optionally, you can disable Secure Boot for changing power limit.
 
-## What it does
+## Features
 
-### Limit to only E-cores on battery
-
-This is done by using `cpuset`. See in the POC section below.
-
-### Limit PL1 and PL2 on battery
+- **Limit to only E-cores on battery**: This is done by using `cpuset`. See in the POC section below.
+- **Limit PL1 and PL2 on battery**: PL1 and PL2 can be set automatically on AC and on battery. These values can be configured via web interface.
+- **Web interface**: Can be accessed via http://localhost:1515
 
 ## TODO
 
-- Add config file
-- (Maybe) add a GUI via web browser
-- Add notification on KDE
-- Add option for forcing AC mode on battery
+- ~~Add config file~~
+- ~~(Maybe) add a GUI via web browser~~
+- ~~Add notification on KDE~~ no need, since you can see the status via web interface
+- ~~Add option for forcing AC mode on battery~~
+- Limit charging (both start and end values)
 
 ## POCs
 
