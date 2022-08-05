@@ -117,17 +117,16 @@ async function reassignNewProcesses() {
     pids = [...generateArray(1, latestPID), ...generateArray(lastReassignedPID, maxPID)];
   }
   //console.log('reassignNewProcesses', lastReassignedPID, latestPID);
+  const fromPID = lastReassignedPID;
   lastReassignedPID = latestPID + 1;
   // reassign to active_cores
-  if (pids.length < 1000) {
-    try { await exec(
-      pids.map(p => `cgclassify -g cpuset:active_cores ${p} 2>/dev/null`).join(';')
-    ); } catch (e) { /* ignored */ }
-  } else {
-    try { await exec(
-      'for pid in $(ps -eLo pid) ; do cgclassify -g cpuset:active_cores $pid 2>/dev/null; done;'
-    ); } catch (e) { /* ignored */ }
-  }
+  try { await exec(
+    `for pid in $(ps -eLo pid); do
+      if (($pid >= ${fromPID} && $pid < ${latestPID})); then
+        cgclassify -g cpuset:active_cores $pid 2>/dev/null;
+      fi;  
+    done;`
+  ); } catch (e) { /* ignored */ }
   fs.writeFileSync(STORED_LAST_PID_PATH, lastReassignedPID.toString());
 }
 
