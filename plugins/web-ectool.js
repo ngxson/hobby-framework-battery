@@ -10,6 +10,10 @@ const escapeHTML = (text) => text.replace(/ /g, "&nbsp;")
   .replace(/\n/g, "<br />");
 
 const getHTMLContent = async () => {
+  if (!ectool.getIsAvailable()) {
+    return 'Error with ectool. Have you disabled Secure Boot?';
+  }
+
   const {
     chargingLimitEnable,
     chargingLimitStart,

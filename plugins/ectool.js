@@ -14,9 +14,13 @@ let CONFIG = {
 };
 let battLastLimit = 100;
 
-const applyChargingLimit = (limitTo) => {
+const applyChargingLimit = async (limitTo) => {
   if (limitTo != battLastLimit) {
-    exec(`/usr/sbin/frmw_ectool --interface=fwk fwchargelimit ${limitTo}`);
+    await exec(`/usr/sbin/frmw_ectool --interface=fwk fwchargelimit ${limitTo}`);
+    if (limitTo >= 100) {
+      // EC_CMD_CHARGE_LIMIT_CONTROL 0x3E03, CHG_LIMIT_DISABLE b0,b64,b0
+      await exec(`/usr/sbin/frmw_ectool --interface=fwk raw 0x3E03 b0,b64,b0`);
+    }
     battLastLimit = limitTo;
   }
 };
@@ -174,7 +178,12 @@ function setFanDuty(duty) {
   //setTimeout(updateBatteryStatus, 1000);
 })();
 
+function getIsAvailable() {
+  return isAvailable;
+}
+
 module.exports = {
+  getIsAvailable,
   applySettings,
   handlePlugCharger,
   handleUnplugCharger,
