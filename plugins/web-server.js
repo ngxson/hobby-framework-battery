@@ -17,10 +17,15 @@ function start() {
         <head>
           <title>${options.title || 'Framework Battery Tuning'}</title>
           <style>
+            html {
+              background: black;
+              color: white;
+            }
             body {
               font-family: sans-serif;
               margin: 2em;
             }
+            a:active, a:visited { color: white }
           </style>
         </head>
         <body>
