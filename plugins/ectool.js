@@ -131,10 +131,16 @@ function funnyLEDDancing(isEnable) {
   const dancing = async (led, colors) => {
     while (true) {
       if (ledDancingEnable) {
-        exec(`/usr/sbin/frmw_ectool --interface=fwk led ${led} ${getRandom(colors)}`);
+        exec(`/usr/sbin/frmw_ectool --interface=fwk ${
+          led === 'keyboard'
+            ? `pwmsetkblight ${getRandom(colors)}`
+            : `led ${led} ${getRandom(colors)}`
+        }`);
         await delay(getRandom([200, 250, 300]));
       } else {
-        exec(`/usr/sbin/frmw_ectool --interface=fwk led ${led} auto`);
+        exec(`/usr/sbin/frmw_ectool --interface=fwk ${
+          led === 'keyboard' ? `pwmsetkblight 20` : `led ${led} auto`
+        }`);
         return;
       }
     }
@@ -144,6 +150,7 @@ function funnyLEDDancing(isEnable) {
     dancing('power', ['red', 'green', 'yellow', 'white']);
     dancing('left', ['red', 'green', 'blue', 'yellow', 'white', 'amber']);
     dancing('right', ['red', 'green', 'blue', 'yellow', 'white', 'amber']);
+    dancing('keyboard', [0, 50, 100]);
   }
   ledDancingEnable = isEnable;
 }
