@@ -137,7 +137,7 @@ function funnyLEDDancing(isEnable) {
   };
   if (!ledDancingEnable && isEnable) {
     ledDancingEnable = true;
-    dancing('power', ['red', 'white']);
+    dancing('power', ['red', 'green', 'yellow', 'white']);
     dancing('left', ['red', 'green', 'blue', 'yellow', 'white', 'amber']);
     dancing('right', ['red', 'green', 'blue', 'yellow', 'white', 'amber']);
   }
