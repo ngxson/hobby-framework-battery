@@ -14,6 +14,7 @@ const SUPPORTED_CPU_MODELS = [
     powerLimitsBattery: { PL1: 8, PL2: 20 },
     powerLimitsAC: { PL1: 40, PL2: 65 },
     autoPowerLimit: false, // to be changed by user
+    autoCoreLimit: false, // to be changed by user
   },
   {
     name: 'i7-1260P',
@@ -25,6 +26,7 @@ const SUPPORTED_CPU_MODELS = [
     powerLimitsBattery: { PL1: 8, PL2: 20 },
     powerLimitsAC: { PL1: 40, PL2: 65 },
     autoPowerLimit: false, // to be changed by user
+    autoCoreLimit: false, // to be changed by user
   },
   {
     name: 'i7-1280P',
@@ -36,6 +38,19 @@ const SUPPORTED_CPU_MODELS = [
     powerLimitsBattery: { PL1: 8, PL2: 20 },
     powerLimitsAC: { PL1: 40, PL2: 65 },
     autoPowerLimit: false, // to be changed by user
+    autoCoreLimit: false, // to be changed by user
+  },
+  {
+    name: '11th Gen Intel',
+    regex: /i[357]-11/,
+    pCores: null,
+    eCores: null,
+    allCores: null,
+    lowPowerCores: null,
+    powerLimitsBattery: { PL1: 8, PL2: 20 },
+    powerLimitsAC: { PL1: 40, PL2: 65 },
+    autoPowerLimit: false, // to be changed by user
+    autoCoreLimit: false, // not possible on 11th gen Intel
   },
 ];
 
@@ -68,7 +83,8 @@ function getCPUModelConfig() {
 }
 
 function setup() {
-  exec(`
+  if (CPU.pCores) {
+    exec(`
     mkdir /sys/fs/cgroup/cpuset;
     mount -t cgroup -o cpuset cpuset /sys/fs/cgroup/cpuset;
     
@@ -85,24 +101,21 @@ function setup() {
     echo 0 > /sys/fs/cgroup/cpuset/active_cores/cpuset.mems;
   `).catch(() => {});
 
-  /**
-   * Since we cannot set cpu_exclusive for cpuset,
-   * we need to re-assign process to active_cores set periodically
-   */
-  const REASSIGN_AFTER_MS = 2 * 60000; // every 2 minutes
-  setInterval(reassignNewProcesses, REASSIGN_AFTER_MS);
+    /**
+     * Since we cannot set cpu_exclusive for cpuset,
+     * we need to re-assign process to active_cores set periodically
+     */
+    const REASSIGN_AFTER_MS = 2 * 60000; // every 2 minutes
+    setInterval(reassignNewProcesses, REASSIGN_AFTER_MS);
+  }
 }
 
 let lastReassignedPID = 1;
 let maxPID = null;
 const generateArray = (start, end) => Array.from(Array(end - start).keys()).map(i => i + start);
 const STORED_LAST_PID_PATH = '/tmp/frmw_last_reassigned_pid';
-function makeChunks(arr, len) {
-  let chunks = [], i = 0, n = arr.length;
-  while (i < n) chunks.push(arr.slice(i, i += len));
-  return chunks;
-}
 async function reassignNewProcesses() {
+  if (!CPU.pCores) return;
   // This function reassign newly created processes to active_cores cpuset
   // The idea is that, we try generating a PID and reassign all processes from lastReassignedPID to the latest PID
   // See more: https://www.baeldung.com/linux/process-id
@@ -136,11 +149,15 @@ async function reassignNewProcesses() {
 detectCPU();
 
 async function setLowPowerMode(enabled) {
+  let shouldLimitCores = null;
   // change cpuset cpus
-  await exec(`
-    echo ${enabled ? CPU.lowPowerCores : CPU.allCores} > /sys/fs/cgroup/cpuset/active_cores/cpuset.cpus;
-  `);
-  reassignNewProcesses();
+  if (CPU.pCores) {
+    shouldLimitCores = enabled && CPU.autoCoreLimit;
+    await exec(`
+      echo ${shouldLimitCores ? CPU.lowPowerCores : CPU.allCores} > /sys/fs/cgroup/cpuset/active_cores/cpuset.cpus;
+    `);
+    reassignNewProcesses();
+  }
 
   // power limit
   const { PL1, PL2 } = enabled ? CPU.powerLimitsBattery : CPU.powerLimitsAC;
@@ -150,7 +167,8 @@ async function setLowPowerMode(enabled) {
 
   notification.send(
     `FRMW: ${enabled ? 'On battery' : 'Charging'}`,
-    `${enabled ? 'Limited CPU performance' : 'Full CPU performance'} PL1=${PL1} PL2=${PL2}`
+    `${enabled ? 'Limited CPU performance' : 'Full CPU performance'} PL1=${PL1} PL2=${PL2}\n`
+      + ((CPU.pCores && shouldLimitCores) ? 'Limited to E-cores' : '')
   );
 }
 

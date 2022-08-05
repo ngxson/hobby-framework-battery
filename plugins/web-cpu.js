@@ -7,7 +7,7 @@ const readFloat = (p) => parseFloat(fs.readFileSync(p).toString());
 
 const getHTMLContent = () => {
   // TODO: add config UI for lowPowerCores
-  const { name, powerLimitsBattery, powerLimitsAC, autoPowerLimit } = cpu.getCPUModelConfig();
+  const { name, powerLimitsBattery, powerLimitsAC, autoPowerLimit, autoCoreLimit, pCores } = cpu.getCPUModelConfig();
   const currPL1 = readFloat('/sys/class/powercap/intel-rapl:0/constraint_0_power_limit_uw') / 1000000;
   const currPL2 = readFloat('/sys/class/powercap/intel-rapl:0/constraint_1_power_limit_uw') / 1000000;
   const enableCores = fs.readFileSync('/sys/fs/cgroup/cpuset/active_cores/cpuset.cpus').toString();
@@ -30,6 +30,14 @@ const getHTMLContent = () => {
       <option value="1" ${autoPowerLimit ? 'selected' : ''}>ON</option>
     </select><br/>
     <br/>
+
+    ${pCores ? `
+      Limit to only E-cores on battery: <select name="autoCoreLimit">
+        <option value="0" ${autoCoreLimit ? '' : 'selected'}>NO, use all cores</option>
+        <option value="1" ${autoCoreLimit ? 'selected' : ''}>YES, limit</option>
+      </select><br/>
+      <br/>
+    ` : ''}
 
     <b>On AC:</b><br/>
     <p style="margin-left: 0.5em">
@@ -72,9 +80,10 @@ function start() {
     } else if (body.action === 'lp_off') {
       cpu.setLowPowerMode(false);
     } else {
-      const { powerLimitsAC, powerLimitsBattery, autoPowerLimit } = body;
+      const { powerLimitsAC, powerLimitsBattery, autoPowerLimit, autoCoreLimit } = body;
       const newConfig = {
         autoPowerLimit: !!autoPowerLimit.toString().match(/1/),
+        autoCoreLimit: !!autoCoreLimit.toString().match(/1/),
         powerLimitsAC: {
           PL1: Math.max(1, parseInt(powerLimitsAC.PL1)),
           PL2: Math.max(1, parseInt(powerLimitsAC.PL2)),
