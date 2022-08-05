@@ -11,7 +11,7 @@ let config = {
     // chargingLimitEnable: true,
     // chargingLimitStart: 20,
     // chargingLimitEnd: 80,
-    // keyRemaps: [ { from: '', to: '' } ],
+    // keyRemaps: [ 'b1,bc,w58', 'b4,b4,76', ... ],
   },
 };
 
@@ -41,6 +41,7 @@ function getConfig(key, defaultVal) {
 }
 
 module.exports = {
+  CFG_PATH,
   setConfig,
   getConfig,
 };

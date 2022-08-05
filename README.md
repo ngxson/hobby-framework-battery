@@ -23,14 +23,16 @@ npm i
 
 Optionally, you can disable Secure Boot for changing power limit.  
 After having installed, you can access the web interface via http://localhost:1515
+It is recommended to enable **CPU Tuning** from the web interface after the installation. You may want to change the default `PL1=4W` to something higher for better performance on battery.
 
 To uninstall, simply run `./uninstall.sh` then reboot your laptop.
 
 ## Features
 
+- **Web interface**: Can be accessed via http://localhost:1515
 - **Limit to only E-cores on battery**: This is done by using `cpuset`. See in the POC section below.
 - **Limit PL1 and PL2 on battery**: PL1 and PL2 can be set automatically on AC and on battery. These values can be configured via web interface.
-- **Web interface**: Can be accessed via http://localhost:1515
+- **EC Tool GUI**: allow you to remap keys, change charging limit and enable a colorful RGB mode (￣▽￣)/♫•*¨*•.¸¸♪
 
 ## TODO
 

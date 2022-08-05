@@ -16,6 +16,7 @@ const getBatteryPath = () => {
 const BATTERY_STATUS_PATH = `${getBatteryPath()}/status`;
 
 function getStatus() {
+  if (getPercent() === 100) return CHARGING;
   return fs.readFileSync(BATTERY_STATUS_PATH).toString().match(/disch/i)
     ? DISCHARGING : CHARGING;
 }
@@ -29,13 +30,12 @@ async function onBatteryStatusChanged(callback) {
   exec('udevadm trigger -s power_supply');
 
   const handler = async () => {
-    await delay(1000);
     if (fs.existsSync(POWER_SUPPLY_PATH)) {
       const status = getStatus();
       if (status !== lastStatus) callback(status);
       lastStatus = status;
     } else {
-      exec('sleep 5; udevadm trigger -s power_supply');
+      exec('sleep 3; udevadm trigger -s power_supply');
     }
   };
 
@@ -43,7 +43,11 @@ async function onBatteryStatusChanged(callback) {
   while (true) {
     await delay(5000);
     if (!fs.existsSync(POWER_SUPPLY_PATH)) continue;
-    fs.watch(POWER_SUPPLY_PATH, handler);
+    fs.watch(POWER_SUPPLY_PATH, () => {
+      // to make sure that the status is up-to-date, we re-run the check twice
+      setTimeout(handler, 2000);
+      setTimeout(handler, 10000);
+    });
     handler();
     return;
   }

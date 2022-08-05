@@ -11,8 +11,9 @@ const SUPPORTED_CPU_MODELS = [
     eCores: '8-15',
     allCores: '0-15',
     lowPowerCores: '8-15',
-    powerLimitsBattery: { PL1: 4, PL2: 20 },
+    powerLimitsBattery: { PL1: 8, PL2: 20 },
     powerLimitsAC: { PL1: 40, PL2: 65 },
+    autoPowerLimit: false, // to be changed by user
   },
   {
     name: 'i7-1260P',
@@ -21,8 +22,9 @@ const SUPPORTED_CPU_MODELS = [
     eCores: '8-15',
     allCores: '0-15',
     lowPowerCores: '8-15',
-    powerLimitsBattery: { PL1: 4, PL2: 20 },
+    powerLimitsBattery: { PL1: 8, PL2: 20 },
     powerLimitsAC: { PL1: 40, PL2: 65 },
+    autoPowerLimit: false, // to be changed by user
   },
   {
     name: 'i7-1280P',
@@ -31,8 +33,9 @@ const SUPPORTED_CPU_MODELS = [
     eCores: '12-19',
     allCores: '0-19',
     lowPowerCores: '12-19',
-    powerLimitsBattery: { PL1: 4, PL2: 20 },
+    powerLimitsBattery: { PL1: 8, PL2: 20 },
     powerLimitsAC: { PL1: 40, PL2: 65 },
+    autoPowerLimit: false, // to be changed by user
   },
 ];
 
@@ -86,7 +89,7 @@ function setup() {
    * Since we cannot set cpu_exclusive for cpuset,
    * we need to re-assign process to active_cores set periodically
    */
-  const REASSIGN_AFTER_MS = 60000; // every 1 minute
+  const REASSIGN_AFTER_MS = 2 * 60000; // every 2 minutes
   setInterval(reassignNewProcesses, REASSIGN_AFTER_MS);
 }
 
@@ -143,6 +146,11 @@ async function setLowPowerMode(enabled) {
   const { PL1, PL2 } = enabled ? CPU.powerLimitsBattery : CPU.powerLimitsAC;
   exec(
     `/usr/sbin/set_power_limit ${PL1} ${PL2}`
+  );
+
+  notification.send(
+    `FRMW: ${enabled ? 'On battery' : 'Charging'}`,
+    `${enabled ? 'Limited CPU performance' : 'Full CPU performance'} PL1=${PL1} PL2=${PL2}`
   );
 }
 
