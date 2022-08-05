@@ -79,7 +79,7 @@ const getHTMLContent = async () => {
       ? `<button type="submit"><div class="rainbow-text" style="text-align: center;">
       <span class="block-line"><span><span style="color:#ff0000;">E</span><span style="color:#ff7700;">n</span><span style="color:#ffee00;">a</span><span style="color:#99ff00;">b</span><span style="color:#26ff00;">l</span><span style="color:#00ff51;">e&nbsp;</span></span><span><span style="color:#00ffc8;">R</span><span style="color:#00c3ff;">G</span><span style="color:#004cff;">B&nbsp;</span></span><span><span style="color:#2a00ff;">M</span><span style="color:#9d00ff;">O</span><span style="color:#ff00ea;">D</span><span style="color:#ff0073;">E</span></span></span>
       </div></button>`
-      : `RGB Mode is ON. <button type="submit">Disable</button>`
+      : `RGB Mode is ON. Look at your LEDs (￣▽￣)/♫•*¨*•.¸¸♪ <button type="submit">Disable</button>`
     }
     </form>
 
