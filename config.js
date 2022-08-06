@@ -8,8 +8,6 @@ let config = {
     // powerLimitsAC: { PL1: 40, PL2: 65 },
   },
   ectool: {
-    // chargingLimitEnable: true,
-    // chargingLimitStart: 20,
     // chargingLimitEnd: 80,
     // keyRemaps: [ 'b1,bc,w58', 'b4,b4,76', ... ],
   },

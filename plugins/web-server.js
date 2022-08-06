@@ -59,8 +59,14 @@ function addMenuEntry(name, url) {
   menu.push({name, url});
 }
 
+const escapeHTML = (text) => text.replace(/ /g, "&nbsp;")
+  .replace(/</g, "&lt;")
+  .replace(/>/g, "&gt;")
+  .replace(/\n/g, "<br />");
+
 module.exports = {
   start,
   app,
   addMenuEntry,
+  escapeHTML,
 };

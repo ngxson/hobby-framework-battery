@@ -15,9 +15,6 @@ const getHTMLContent = async () => {
   }
 
   const {
-    chargingLimitEnable,
-    chargingLimitStart,
-    chargingLimitEnd,
     keyRemaps,
   } = ectool.getConfig();
   const currentLimit = await ectool.getCurrentChargingLimit();
@@ -28,7 +25,8 @@ const getHTMLContent = async () => {
     <br />
     <br />
 
-    Set charging limit: &nbsp;&nbsp;
+    Set charging limit: <br/>
+    <small>This setting will be applied on boot</br><br/>
     <form method="POST" style="display: inline-block">
       <input type="hidden" name="action" value="enable_charging" />
       <input type="submit" value="Set charging limit to 100" />
@@ -93,7 +91,7 @@ const getHTMLContent = async () => {
     <br />
 
     Key remap: <a href="/ectool/kb" target="_blank">Need more info?</a><br/>
-    <small>This setting will be applied at boot. To reset all remaps, unset all fields below (set to "...") and reboot your computer.</small><br/>
+    <small>This setting will be applied on boot. To reset all remaps, unset all fields below (set to "...") and reboot your computer.</small><br/>
     <br/>
     <form method="POST">
       ${[0, 1, 2, 3, 4, 5, 6, 7, 8].map(i => {
@@ -138,30 +136,6 @@ const getHTMLContent = async () => {
 
     EC version:
     <pre>${escapeHTML(ecVersion)}</pre>
-    
-    <!-- Disable on release, since it doesn't work at all -->
-    <!--form method="POST">
-    <b>Charging limit:</b><br />
-    <p style="margin-left: 0.5em">
-      <b>Note:</b> This function is in development and may results many bugs (i.e. not charging after a reboot). If you experience a bug, you can use "force start charging" button below.<br/>
-      If you unplug when the charging above start limit, you still have 5 minutes to re-plug and to continue the charging.<br/>
-      <br/>
-
-      Status: <select value="${chargingLimitEnable ? 1 : 0}" name="chargingLimitEnable">
-                <option value="0">OFF</option>
-                <option value="1">ON</option>
-              </select><br/>
-      Start charging from (%): <input type="number" name="chargingLimitStart" value="${chargingLimitStart}" /> (minimum=20%)<br/>
-      Stop charging at (%): <input type="number" name="chargingLimitEnd" value="${chargingLimitEnd}" />
-    </p>
-    <br />
-
-    <input type="submit" value="Save and apply" />
-    </form>
-    <form method="POST" style="display: inline-block">
-      <input type="hidden" name="action" value="force_start_charging" />
-      <input type="submit" value="Force start charging" />
-    </form-->
   `;
 };
 
@@ -194,12 +168,13 @@ function start() {
   webServer.app.post('/ectool', (req, res) => {
     const {body} = req;
     let delay = 2000;
-    if (body.action === 'force_start_charging') {
-      ectool.forceStartCharging();
-    } else if (body.action === 'enable_charging') {
-      ectool.enableCharging();
+    if (body.action === 'enable_charging') {
+      ectool.applySettings({ chargingLimitEnd: 100 }, true);
     } else if (body.action === 'disable_charging') {
-      ectool.disableCharging();
+      ectool.applySettings({ chargingLimitEnd: 20 }, true);
+    } else if (body.action === 'charging_set_custom') {
+      const chargingLimitEnd = parseInt(body.value);
+      ectool.applySettings({ chargingLimitEnd }, true);
     } else if (body.action === 'fan_auto') {
       ectool.setFanDuty(null); delay = 1;
     } else if (body.action === 'fan_custom') {
@@ -214,15 +189,6 @@ function start() {
       //console.log(keyRemaps);
       delay = 1;
     }
-    /* else {
-      const { chargingLimitEnable, chargingLimitStart, chargingLimitEnd } = body;
-      const newConfig = {
-        chargingLimitEnable: parseInt(chargingLimitEnable) === 1,
-        chargingLimitStart: Math.max(parseInt(chargingLimitStart), 5),
-        chargingLimitEnd: Math.min(parseInt(chargingLimitEnd), 100),
-      };
-      ectool.applySettings(newConfig, true);
-    }*/
     setTimeout(() => res.redirect(302, '/ectool'), delay);
   });
 }

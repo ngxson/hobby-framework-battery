@@ -84,35 +84,34 @@ function getCPUModelConfig() {
 
 function setup() {
   if (CPU.pCores) {
-    exec(`
-    mkdir /sys/fs/cgroup/cpuset;
-    mount -t cgroup -o cpuset cpuset /sys/fs/cgroup/cpuset;
-    
-    cgcreate -g cpuset:p_cores;
-    echo ${CPU.pCores} > /sys/fs/cgroup/cpuset/p_cores/cpuset.cpus;
-    echo 0 > /sys/fs/cgroup/cpuset/p_cores/cpuset.mems;
-    
-    cgcreate -g cpuset:e_cores;
-    echo ${CPU.eCores} > /sys/fs/cgroup/cpuset/e_cores/cpuset.cpus;
-    echo 0 > /sys/fs/cgroup/cpuset/e_cores/cpuset.mems;
+    if (!fs.existsSync('/sys/fs/cgroup/cpuset')) {
+      exec(`
+        mkdir /sys/fs/cgroup/cpuset;
+        mount -t cgroup -o cpuset cpuset /sys/fs/cgroup/cpuset;
 
-    cgcreate -g cpuset:active_cores;
-    echo ${CPU.allCores} > /sys/fs/cgroup/cpuset/active_cores/cpuset.cpus;
-    echo 0 > /sys/fs/cgroup/cpuset/active_cores/cpuset.mems;
-  `).catch(() => {});
+        cgcreate -g cpuset:active_cores;
+        echo ${CPU.allCores} > /sys/fs/cgroup/cpuset/active_cores/cpuset.cpus;
+        echo 0 > /sys/fs/cgroup/cpuset/active_cores/cpuset.mems;
+        echo 1 > /sys/fs/cgroup/cpuset/active_cores/cgroup.clone_children;
+        for pid in $(ps -eLo pid); do
+          cgclassify -g cpuset:active_cores $pid 2>/dev/null;
+        done;
+      `).catch((e) => {
+        console.error(e);
+      });
+    }
 
     /**
      * Since we cannot set cpu_exclusive for cpuset,
      * we need to re-assign process to active_cores set periodically
      */
-    const REASSIGN_AFTER_MS = 2 * 60000; // every 2 minutes
+    const REASSIGN_AFTER_MS = 60000; // every minute
     setInterval(reassignNewProcesses, REASSIGN_AFTER_MS);
   }
 }
 
 let lastReassignedPID = 1;
 let maxPID = null;
-const generateArray = (start, end) => Array.from(Array(end - start).keys()).map(i => i + start);
 const STORED_LAST_PID_PATH = '/tmp/frmw_last_reassigned_pid';
 async function reassignNewProcesses() {
   if (!CPU.pCores) return;
@@ -124,24 +123,16 @@ async function reassignNewProcesses() {
   if (!maxPID) // read the max PID possible. usually be 2^22
     maxPID = parseInt(fs.readFileSync('/proc/sys/kernel/pid_max').toString());
   const latestPID = parseInt((await exec('echo $$')).trim());
-  let pids = [];
-  if (lastReassignedPID < latestPID) {
-    // all processes from last to current
-    pids = generateArray(lastReassignedPID, latestPID);
-  } else if (latestPID < lastReassignedPID) {
-    // in case the system already reached maxPID and wrap the number around
-    pids = [...generateArray(1, latestPID), ...generateArray(lastReassignedPID, maxPID)];
-  }
-  //console.log('reassignNewProcesses', lastReassignedPID, latestPID);
+  const isWrapAround = latestPID < lastReassignedPID;
   const fromPID = lastReassignedPID;
   lastReassignedPID = latestPID + 1;
   // reassign to active_cores
   try { await exec(
     `for pid in $(ps -eLo pid); do
-      if (($pid >= ${fromPID} && $pid < ${latestPID})); then
+      ${isWrapAround ? '' : `if (($pid >= ${fromPID} && $pid < ${latestPID})); then`}
         cgclassify -g cpuset:active_cores $pid 2>/dev/null;
-      fi;  
-    done;`
+      ${isWrapAround ? '' : 'fi;'}  
+      done;`
   ); } catch (e) { /* ignored */ }
   fs.writeFileSync(STORED_LAST_PID_PATH, lastReassignedPID.toString());
 }

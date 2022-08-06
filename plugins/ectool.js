@@ -7,9 +7,7 @@ const ALLOW_TIME_TO_REPLUG = 5 * 60000; // 5 minutes
 
 let isAvailable = false;
 let CONFIG = {
-  chargingLimitEnable: false,
-  chargingLimitStart: 20,
-  chargingLimitEnd: 80,
+  chargingLimitEnd: 100,
   keyRemaps: [],
 };
 let battLastLimit = 100;
@@ -27,13 +25,10 @@ const applyChargingLimit = async (limitTo) => {
 
 function applySettings(cfg, save, opt={}) {
   CONFIG = { ...CONFIG, ...cfg };
-  const { chargingLimitEnable, keyRemaps } = CONFIG;
-  if (save) config.setConfig('ectool', cfg);
+  const { chargingLimitEnd, keyRemaps } = CONFIG;
+  if (save) config.setConfig('ectool', CONFIG);
 
-  if (!chargingLimitEnable)
-    if (opt.chargeLimit) applyChargingLimit(opt.chargeLimit);
-  else
-    updateBatteryStatus();
+  applyChargingLimit(chargingLimitEnd);
 
   for (const remap of keyRemaps) {
     if (!remap.match(/b[a-f0-9],b[a-f0-9],w[a-f0-9]+/)) continue;
@@ -42,73 +37,12 @@ function applySettings(cfg, save, opt={}) {
   }
 }
 
-let allowRePlugUntil = 0;
-let continueToCharge = false;
-function updateBatteryStatus() {
-  /*
-  const {
-    chargingLimitEnable,
-    chargingLimitStart,
-    chargingLimitEnd,
-  } = CONFIG;
-  if (!chargingLimitEnable) return;
-  const battLevel = battery.getPercent();
-  
-  if (continueToCharge) {
-    // if plugging and charing has started, we continue to the end
-    applyChargingLimit(chargingLimitEnd);
-  } else {
-    if (battLevel > chargingLimitStart) {
-      applyChargingLimit(chargingLimitStart);
-    } else {
-      applyChargingLimit(chargingLimitEnd);
-      continueToCharge = true;
-    }
-  }
-  */
-}
-
 function handlePlugCharger() {
-  /*
-  const {
-    chargingLimitEnable,
-    chargingLimitStart,
-    chargingLimitEnd,
-  } = CONFIG;
-  const now = Date.now();
-  if (!chargingLimitEnable) return;
-  if (now < allowRePlugUntil) {
-    // if we unplug charger for a short period and replug,
-    // we should still be able to charge the battery
-    applyChargingLimit(chargingLimitEnd);
-    continueToCharge = true;
-  } else {
-    // else, we apply the start limit
-    applyChargingLimit(chargingLimitStart);
-  }
-  */
+  // not used (yet)
 }
 
 function handleUnplugCharger() {
-  /*
-  allowRePlugUntil = Date.now() + ALLOW_TIME_TO_REPLUG;
-  continueToCharge = false;
-  */
-}
-
-function forceStartCharging() {
-  if (!CONFIG.chargingLimitEnable) return;
-  allowRePlugUntil = Date.now() + ALLOW_TIME_TO_REPLUG;
-  applyChargingLimit(CONFIG.chargingLimitEnd);
-  continueToCharge = true;
-}
-
-function disableCharging() {
-  applySettings({ chargingLimitEnable: false }, true, { chargeLimit: 20 });
-}
-
-function enableCharging() {
-  applySettings({ chargingLimitEnable: false }, true, { chargeLimit: 100 });
+  // not used (yet)
 }
 
 async function getCurrentChargingLimit() {
@@ -194,9 +128,6 @@ module.exports = {
   applySettings,
   handlePlugCharger,
   handleUnplugCharger,
-  forceStartCharging,
-  disableCharging,
-  enableCharging,
   getCurrentChargingLimit,
   getConfig,
   getECVersion,
