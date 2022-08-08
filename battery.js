@@ -13,12 +13,11 @@ const getBatteryPath = () => {
     if (dir.match(/BAT/)) return `/sys/class/power_supply/${dir}`;
   }
 };
-const BATTERY_STATUS_PATH = `${getBatteryPath()}/status`;
+const AC_ONLINE_PATH = '/sys/class/power_supply/ACAD/online';
 
 function getStatus() {
-  if (getPercent() === 100) return CHARGING;
-  return fs.readFileSync(BATTERY_STATUS_PATH).toString().match(/disch/i)
-    ? DISCHARGING : CHARGING;
+  return fs.readFileSync(AC_ONLINE_PATH).toString().match(/1/i)
+    ? CHARGING : DISCHARGING;
 }
 
 function getPercent() {
