@@ -42,10 +42,16 @@ async function onBatteryStatusChanged(callback) {
   while (true) {
     await delay(5000);
     if (!fs.existsSync(POWER_SUPPLY_PATH)) continue;
+    let intervalId = null;
     fs.watch(POWER_SUPPLY_PATH, () => {
       // to make sure that the status is up-to-date, we re-run the check twice
       setTimeout(handler, 2000);
       setTimeout(handler, 10000);
+      if (intervalId !== null) {
+        clearInterval(intervalId);
+      }
+      // check periodically, for the case after hibernation
+      intervalId = setInterval(handler, 60000);
     });
     handler();
     return;
