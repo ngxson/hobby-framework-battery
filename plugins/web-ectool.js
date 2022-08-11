@@ -109,7 +109,7 @@ const getHTMLContent = async () => {
     <br />
 
     Key remap: <a href="/ectool/kb" target="_blank">Need more info?</a><br/>
-    <small>This setting will be applied on boot. To reset all remaps, unset all fields below (set to "...") and reboot your computer.</small><br/>
+    <small>This setting will be applied on boot.</small><br/>
     <br/>
     <form method="POST">
       ${[0, 1, 2, 3, 4, 5, 6, 7, 8].map(i => {
@@ -145,6 +145,12 @@ const getHTMLContent = async () => {
       <br/><br/>
       <input type="hidden" name="action" value="key_remap" />
       <input type="submit" value="Save & apply key remap" />
+    </form>
+    <br/>
+    Something goes wrong? Reset keyboard remap here:
+    <form method="POST" style="display: inline-block">
+      <input type="hidden" name="action" value="key_remap_reset" />
+      <input type="submit" value="Reset" />
     </form>
 
     <br />
@@ -207,6 +213,8 @@ function start() {
       const keyRemaps = body.value.map(e => e.join(',')).filter(e => !e.match(/NONE/));
       ectool.applySettings({ keyRemaps }, true);
       delay = 1;
+    } else if (body.action === 'key_remap_reset') {
+      ectool.resetKeyboardMatrix();
     } else if (body.action === 'toggle_pause_charging') {
       ectool.applySettings({ isChargingPaused: !isChargingPaused }, true);
       delay = 500;
@@ -378,7 +386,7 @@ const SCANCODES = [
   {name: 'SCANCODE_F13', hex: '0x000f'},
   {name: 'SCANCODE_F14', hex: '0x0017'},
   {name: 'SCANCODE_F15', hex: '0x001f'},
-  {name: 'SCANCODE_BACK =', hex: '0xe038'},
+  {name: 'SCANCODE_BACK', hex: '0xe038'},
   {name: 'SCANCODE_REFRESH', hex: '0xe020'},
   {name: 'SCANCODE_FORWARD', hex: '0xe030'},
   {name: 'SCANCODE_FULLSCREEN', hex: '0xe01d'},
