@@ -8,10 +8,16 @@ const getHTMLContent = async ({ showProcessCgroup }) => {
   const cfgJSON = fs.readFileSync(config.CFG_PATH).toString();
   let processes, limitedCoresPID;
   if (showProcessCgroup) {
+    const seenProc = {};
     processes = (await exec('ps -eLo pid,command'))
       .trim().split('\n')
       .map(line => line.trim().match(/([0-9]+) (.*)/))
-      .filter(matched => !!matched);
+      .filter(matched => !!matched)
+      .filter(([_, pid]) => {
+        const seen = seenProc[pid];
+        seenProc[pid] = true;
+        return !seen;
+      });
     limitedCoresPID = fs.readFileSync('/sys/fs/cgroup/cpuset/active_cores/cgroup.procs').toString()
       .trim().split('\n')
       .reduce((prev, pid) => { prev[pid] = true; return prev }, {});

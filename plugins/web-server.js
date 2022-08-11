@@ -18,14 +18,14 @@ function start() {
           <title>${options.title || 'Framework Battery Tuning'}</title>
           <style>
             html {
-              background: black;
-              color: white;
+              background: #222;
+              color: #eee;
             }
             body {
               font-family: sans-serif;
               margin: 2em;
             }
-            a:active, a:visited { color: white }
+            a:active, a:visited, a:link, a:hover { color: #eee }
           </style>
         </head>
         <body>

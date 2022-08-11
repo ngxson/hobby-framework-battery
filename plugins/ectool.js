@@ -3,32 +3,35 @@ const battery = require('../battery');
 const exec = require('promised-exec');
 const delay = (ms) => new Promise(r => setTimeout(r, ms));
 
-const ALLOW_TIME_TO_REPLUG = 5 * 60000; // 5 minutes
-
 let isAvailable = false;
 let CONFIG = {
   chargingLimitEnd: 100,
+  isChargingPaused: false,
   keyRemaps: [],
 };
 let battLastLimit = 100;
 
 const applyChargingLimit = async (limitTo) => {
-  if (limitTo != battLastLimit) {
-    await exec(`/usr/sbin/frmw_ectool --interface=fwk fwchargelimit ${limitTo}`);
-    if (limitTo >= 100) {
-      // EC_CMD_CHARGE_LIMIT_CONTROL 0x3E03, CHG_LIMIT_DISABLE b0,b64,b0
-      await exec(`/usr/sbin/frmw_ectool --interface=fwk raw 0x3E03 b0,b64,b0`);
+  try {
+    if (limitTo != battLastLimit) {
+      await exec(`/usr/sbin/frmw_ectool --interface=fwk fwchargelimit ${limitTo}`);
+      battLastLimit = limitTo;
     }
-    battLastLimit = limitTo;
+  } catch (e) {
+    console.error(e);
   }
 };
 
 function applySettings(cfg, save, opt={}) {
   CONFIG = { ...CONFIG, ...cfg };
-  const { chargingLimitEnd, keyRemaps } = CONFIG;
+  const { chargingLimitEnd, isChargingPaused, keyRemaps } = CONFIG;
   if (save) config.setConfig('ectool', CONFIG);
 
-  applyChargingLimit(chargingLimitEnd);
+  if (!isChargingPaused) {
+    applyChargingLimit(chargingLimitEnd);
+  } else {
+    pauseChargingHandler(battery.getPercent());
+  }
 
   for (const remap of keyRemaps) {
     if (!remap.match(/b[a-f0-9],b[a-f0-9],w[a-f0-9]+/)) continue;
@@ -100,6 +103,15 @@ function setFanDuty(duty) {
     ? '/usr/sbin/frmw_ectool --interface=fwk autofanctrl'
     : `/usr/sbin/frmw_ectool --interface=fwk fanduty ${duty}`);
 }
+
+
+// pause charging
+const pauseChargingHandler = (level) => {
+  if (CONFIG.isChargingPaused) {
+    applyChargingLimit(level);
+  }
+};
+battery.onBatteryLevelChanged(pauseChargingHandler);
 
 
 (async () => {

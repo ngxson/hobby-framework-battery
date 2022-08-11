@@ -18,7 +18,6 @@ function start() {
 
     if (cpu.getCPUModelConfig().autoPowerLimit)
       cpu.setLowPowerMode(isBattery);
-    powertop.autoTune();
 
     scripts.run(isBattery ? scripts.SCRIPT_ON_BATTERY : scripts.SCRIPT_ON_AC);
     // ectool

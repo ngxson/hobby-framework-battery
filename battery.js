@@ -14,6 +14,7 @@ const getBatteryPath = () => {
   }
 };
 const AC_ONLINE_PATH = '/sys/class/power_supply/ACAD/online';
+const BATT_CAPACITY_PATH = `${getBatteryPath()}/capacity`;
 
 function getStatus() {
   return fs.readFileSync(AC_ONLINE_PATH).toString().match(/1/i)
@@ -21,7 +22,7 @@ function getStatus() {
 }
 
 function getPercent() {
-  return parseInt(fs.readFileSync(`${getBatteryPath()}/capacity`));
+  return parseInt(fs.readFileSync(BATT_CAPACITY_PATH).toString());
 }
 
 async function onBatteryStatusChanged(callback) {
@@ -58,10 +59,32 @@ async function onBatteryStatusChanged(callback) {
   }
 }
 
+
+// battery level listener
+
+const battLevelCallbacks = [];
+function onBatteryLevelChanged(callback) {
+  battLevelCallbacks.push(callback);
+}
+let lastBattLevel = -1;
+const battLevelHandler = () => {
+  try {
+    const level = getPercent();
+    if (level != lastBattLevel) {
+      lastBattLevel = level;
+      for (const cb of battLevelCallbacks) cb(level);
+    }
+  } catch (e) {
+    // ignored
+  }
+};
+setInterval(battLevelHandler, 60000);
+
 module.exports = {
   CHARGING,
   DISCHARGING,
   onBatteryStatusChanged,
+  onBatteryLevelChanged,
   getStatus,
   getPercent,
 };

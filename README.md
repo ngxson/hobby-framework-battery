@@ -1,19 +1,23 @@
 # Framework Laptop battery tuning service on Linux
 
-**IMPORTANT NOTICE**: This service is in very early development phase and can be unstable. Currently, I can only test it on Fedora 36. It should also work on Ubuntu.
+Tested on Fedora 36. It should also work on Ubuntu.
 
-This is **not** a replacement for `tlp`. It is recommended to use this service with `tlp`.
+## FAQs
+
+- Will it works with `tlp`?  
+Yes. This isn't a replacement for `tlp`. It is recommended to use this service with `tlp`.
+- Why using nodejs / systemd service?  
+In short, I want to do many things in only one process: monitoring battery, GUI via web server,...
 
 ## Install
 
-**Install dependencies**:
-
-Ubuntu: `sudo apt install devmem2 msr-tools libcgroup-tools powertop`
-
+1. **Install dependencies**:  
+Ubuntu: `sudo apt install devmem2 msr-tools libcgroup-tools powertop`  
 Fedora: `sudo dnf install devmem2 msr-tools libcgroup-tools powertop`
 
-**Install the service**: You need NodeJS (v14 and up) installed on your system. Verify with `node --version`
+2. **Install nodejs**: Depends on which distribution you're using, please search on Google. You can install any version from v14 (v16.10.0 is recommended). Verify with `node --version`
 
+3. **Install the service**:  
 ```
 npm i
 ./install.sh
@@ -48,6 +52,8 @@ To uninstall, simply run `./uninstall.sh` then reboot your laptop.
 - ~~Add option for forcing AC mode on battery~~
 - Limit charging (both start and end values)
 - ~~Better algorithm for moving processes among cores~~
+- ~~Pause charging~~
+- Fan curve control
 
 ## POCs
 

@@ -4,6 +4,8 @@ const config = require('../config');
 const battery = require('../battery');
 const fs = require('fs');
 
+let lastFanSpeed = 90;
+
 const escapeHTML = (text) => text.replace(/ /g, "&nbsp;")
   .replace(/</g, "&lt;")
   .replace(/>/g, "&gt;")
@@ -15,40 +17,56 @@ const getHTMLContent = async () => {
   }
 
   const {
+    isChargingPaused,
     keyRemaps,
   } = ectool.getConfig();
   const currentLimit = await ectool.getCurrentChargingLimit();
   const ecVersion = await ectool.getECVersion();
   return `
-    <br />
-    <b>Current charging limit:</b> ${currentLimit}%<br />
-    <br />
-    <br />
+    ${!isChargingPaused ? `
+      <br />
+      <b>Current charging limit:</b> ${currentLimit}%<br />
+      <br />
+      <br />
 
-    Set charging limit: <br/>
-    <small>This setting will be applied on boot</br><br/>
+      <b>Set charging limit:</b> <br/>
+      <small>This setting will be applied on boot</br><br/>
+      <form method="POST" style="display: inline-block">
+        <input type="hidden" name="action" value="enable_charging" />
+        <input type="submit" value="Set charging limit to 100" />
+      </form>
+      &nbsp;&nbsp;
+      <form method="POST" style="display: inline-block">
+        <input type="hidden" name="action" value="disable_charging" />
+        <input type="submit" value="Set charging limit to 20" />
+      </form>
+      <br />
+      <form method="POST">
+        Or custom value (min=20 and max=100):
+        <input type="hidden" name="action" value="charging_set_custom" />
+        <input type="number" name="value" value="${currentLimit}" />
+        <input type="submit" value="Set custom value" />
+      </form>
+
+      <br />
+      ------------------------
+      <br />
+    ` : ''}
+
+    <b>Pause charging:</b> <br/>
+    Enabling this will "disconnect" the charger from the battery, only use the current from the charger to run the computer.<br/>
+    Status: <b>${isChargingPaused ? `CHARGING PAUSED AT ${currentLimit}%` : 'disable'}</b>
+    &nbsp;&nbsp;&nbsp;
     <form method="POST" style="display: inline-block">
-      <input type="hidden" name="action" value="enable_charging" />
-      <input type="submit" value="Set charging limit to 100" />
-    </form>
-    &nbsp;&nbsp;
-    <form method="POST" style="display: inline-block">
-      <input type="hidden" name="action" value="disable_charging" />
-      <input type="submit" value="Set charging limit to 20" />
-    </form>
-    <br />
-    <form method="POST">
-      Or custom value (min=20 and max=100):
-      <input type="hidden" name="action" value="charging_set_custom" />
-      <input type="number" name="value" value="${currentLimit}" />
-      <input type="submit" value="Set custom value" />
+      <input type="hidden" name="action" value="toggle_pause_charging" />
+      <input type="submit" value="Toggle" />
     </form>
 
     <br />
     ------------------------
     <br />
 
-    Fan control:
+    <b>Fan control: </b>
     <form method="POST" style="display: inline-block">
       <input type="hidden" name="action" value="fan_auto" />
       <input type="submit" value="Set fan control to auto" />
@@ -56,7 +74,7 @@ const getHTMLContent = async () => {
     <br />
     <form method="POST" style="display: inline-block">
       Or custom value (min=0 and max=100):
-      <input type="number" name="value" value="${currentLimit}" />
+      <input type="number" name="value" value="${lastFanSpeed}" />
       <input type="hidden" name="action" value="fan_custom" />
       <input type="submit" value="Set custom fan duty value" />
     </form>
@@ -166,6 +184,7 @@ function start() {
     res.sendHtmlBody(getHTMLContentKB(), { title: 'Framework Keyboard Info' });
   });
   webServer.app.post('/ectool', (req, res) => {
+    const { isChargingPaused } = ectool.getConfig();
     const {body} = req;
     let delay = 2000;
     if (body.action === 'enable_charging') {
@@ -179,6 +198,7 @@ function start() {
       ectool.setFanDuty(null); delay = 1;
     } else if (body.action === 'fan_custom') {
       const val = parseInt(body.value);
+      lastFanSpeed = val;
       ectool.setFanDuty(val); delay = 1;
     } else if (body.action === 'led_funny') {
       ectool.funnyLEDDancing(!ectool.getFunnyLEDDancingStatus());
@@ -186,8 +206,10 @@ function start() {
     } else if (body.action === 'key_remap') {
       const keyRemaps = body.value.map(e => e.join(',')).filter(e => !e.match(/NONE/));
       ectool.applySettings({ keyRemaps }, true);
-      //console.log(keyRemaps);
       delay = 1;
+    } else if (body.action === 'toggle_pause_charging') {
+      ectool.applySettings({ isChargingPaused: !isChargingPaused }, true);
+      delay = 500;
     }
     setTimeout(() => res.redirect(302, '/ectool'), delay);
   });
