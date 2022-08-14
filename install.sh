@@ -2,7 +2,7 @@
 
 verifyAppInstalled() {
   toolName=$1
-  if ! command -v "$toolName" &> /dev/null; then
+  if ! command -v "$toolName" > /dev/null 2>&1 ; then
     echo "Required app '${toolName}' is not installed"
     exit 1
   fi
