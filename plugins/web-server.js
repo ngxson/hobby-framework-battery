@@ -52,7 +52,7 @@ function start() {
     powertop.autoTune();
     res.sendHtmlBody('Complete', { title: 'powertop auto tune' });
   });
-  app.listen(PORT, () => console.log(`Web server is up on port ${PORT}`));
+  app.listen(PORT, '127.0.0.1', () => console.log(`Web server is up on port ${PORT}`));
 }
 
 function addMenuEntry(name, url) {
