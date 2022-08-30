@@ -85,6 +85,7 @@ function start() {
       const { powerLimitsAC, powerLimitsBattery, autoPowerLimit, autoCoreLimit } = body;
       const oldConfig = config.getConfig('cpu', {});
       const newConfig = {
+        ...oldConfig,
         autoPowerLimit: !!autoPowerLimit.toString().match(/1/),
         autoCoreLimit: !!autoCoreLimit.toString().match(/1/),
         powerLimitsAC: {
@@ -95,7 +96,6 @@ function start() {
           PL1: Math.max(1, parseInt(powerLimitsBattery.PL1)),
           PL2: Math.max(1, parseInt(powerLimitsBattery.PL2)),
         },
-        ...oldConfig,
       };
       //console.log(newConfig)
       config.setConfig('cpu', newConfig);
