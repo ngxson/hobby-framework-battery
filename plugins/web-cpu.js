@@ -86,8 +86,8 @@ function start() {
       const oldConfig = config.getConfig('cpu', {});
       const newConfig = {
         ...oldConfig,
-        autoPowerLimit: !!autoPowerLimit.toString().match(/1/),
-        autoCoreLimit: !!autoCoreLimit.toString().match(/1/),
+        autoPowerLimit: !!(autoPowerLimit || '').toString().match(/1/),
+        autoCoreLimit: !!(autoCoreLimit || '').toString().match(/1/),
         powerLimitsAC: {
           PL1: Math.max(1, parseInt(powerLimitsAC.PL1)),
           PL2: Math.max(1, parseInt(powerLimitsAC.PL2)),
