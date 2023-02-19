@@ -3,10 +3,24 @@ const ectool = require('./ectool');
 const config = require('../config');
 const battery = require('../battery');
 const fs = require('fs');
+const exec = require('promised-exec');
+const { KB_MATRIX, SCANCODES } = require('../constants');
 
 let lastFanSpeed = 90;
 
-const escapeHTML = (text) => text.replace(/ /g, "&nbsp;")
+const KtoC = v => (+v) - 273;
+const CtoK = v => (+v) + 273;
+const TEMPERATURE_OPTIONS_START = 30;
+const TEMPERATURE_OPTIONS = (new Array(60))
+  .fill(null)
+  .map((_, i) => `<option value="${CtoK(TEMPERATURE_OPTIONS_START + i)}">
+    ${TEMPERATURE_OPTIONS_START + i}
+  </option>`)
+  .join('');
+
+const escapeHTML = (text) => text
+  .replace(/ /g, "&nbsp;")
+  .replace(/"/g, "&quot;")
   .replace(/</g, "&lt;")
   .replace(/>/g, "&gt;")
   .replace(/\n/g, "<br />");
@@ -22,6 +36,7 @@ const getHTMLContent = async () => {
   } = ectool.getConfig();
   const currentLimit = await ectool.getCurrentChargingLimit();
   const ecVersion = await ectool.getECVersion();
+  const fanPoints = await getFanPoints();
   return `
     ${!isChargingPaused ? `
       <br />
@@ -80,29 +95,38 @@ const getHTMLContent = async () => {
     </form>
 
     <br />
-    ------------------------
-    <br />
+    <b>Temperature:</b> (real-time, update every 5 seconds)<br />
+    <pre id="temperature_view" style="font-size: 110%;"></pre>
+    <script>
+      var temperature_view_elem = document.getElementById('temperature_view');
+      function update_temperature_view() {
+        fetch('/ectool/temperature')
+          .then(response => response.text())
+          .then(text => {temperature_view_elem.innerHTML = text});
+      }
+      setInterval(update_temperature_view, 5000);
+      update_temperature_view();
+    </script>
 
-    <form method="POST">
-    <input type="hidden" name="action" value="led_funny" />
-    <style>
-    .rainbow-text {
-      font-family: Arial;
-      font-weight: bold;
-      font-size: 20px;
-    }
-    .rainbow-text .block-line > span {
-      display: inline-block;
-    }
-    </style>
-    ${!ectool.getFunnyLEDDancingStatus()
-      ? `<button type="submit"><div class="rainbow-text" style="text-align: center;">
-      <span class="block-line"><span><span style="color:#ff0000;">E</span><span style="color:#ff7700;">n</span><span style="color:#ffee00;">a</span><span style="color:#99ff00;">b</span><span style="color:#26ff00;">l</span><span style="color:#00ff51;">e&nbsp;</span></span><span><span style="color:#00ffc8;">R</span><span style="color:#00c3ff;">G</span><span style="color:#004cff;">B&nbsp;</span></span><span><span style="color:#2a00ff;">M</span><span style="color:#9d00ff;">O</span><span style="color:#ff00ea;">D</span><span style="color:#ff0073;">E</span></span></span>
-      </div></button>`
-      : `RGB Mode is ON. Look at your LEDs (￣▽￣)/♫•*¨*•.¸¸♪ <button type="submit">Disable</button>`
-    }
+    <b>Fan temperature points</b><br/>
+    <pre>id - fanOff - fanMax - name<br/>${fanPoints.map(({id, fanOff, fanMax, name}) => 
+      `${id}  ${KtoC(fanOff)}°C  ${KtoC(fanMax)}°C  ${name}`
+    ).join('<br/>')}</pre>
+    <form method="POST" style="display: inline-block">
+      Change fan point:
+      <select name="sensor">
+        ${fanPoints.map(({id, warn, high, halt, name}) => 
+          `<option value="${escapeHTML(JSON.stringify({ id, warn, high, halt }))}">${name}</option>`
+        ).join('')}
+      </select>
+      &nbsp;&nbsp;
+      fan_off = <select name="fan_off">${TEMPERATURE_OPTIONS}</select>
+      &nbsp;&nbsp;
+      fan_max = <select name="fan_max">${TEMPERATURE_OPTIONS}</select>
+      &nbsp;&nbsp;&nbsp;&nbsp;
+      <input type="hidden" name="action" value="fan_point" />
+      <input type="submit" value="Set" />
     </form>
-
 
     <br />
     ------------------------
@@ -158,6 +182,31 @@ const getHTMLContent = async () => {
     ------------------------
     <br />
 
+    <form method="POST">
+    <input type="hidden" name="action" value="led_funny" />
+    <style>
+    .rainbow-text {
+      font-family: Arial;
+      font-weight: bold;
+      font-size: 20px;
+    }
+    .rainbow-text .block-line > span {
+      display: inline-block;
+    }
+    </style>
+    ${!ectool.getFunnyLEDDancingStatus()
+      ? `<button type="submit"><div class="rainbow-text" style="text-align: center;">
+      <span class="block-line"><span><span style="color:#ff0000;">E</span><span style="color:#ff7700;">n</span><span style="color:#ffee00;">a</span><span style="color:#99ff00;">b</span><span style="color:#26ff00;">l</span><span style="color:#00ff51;">e&nbsp;</span></span><span><span style="color:#00ffc8;">R</span><span style="color:#00c3ff;">G</span><span style="color:#004cff;">B&nbsp;</span></span><span><span style="color:#2a00ff;">M</span><span style="color:#9d00ff;">O</span><span style="color:#ff00ea;">D</span><span style="color:#ff0073;">E</span></span></span>
+      </div></button>`
+      : `RGB Mode is ON. Look at your LEDs (￣▽￣)/♫•*¨*•.¸¸♪ <button type="submit">Disable</button>`
+    }
+    </form>
+
+
+    <br />
+    ------------------------
+    <br />
+
     EC version:
     <pre>${escapeHTML(ecVersion)}</pre>
   `;
@@ -181,6 +230,34 @@ const getHTMLContentKB = () => {
   `;
 };
 
+const getHTMLContentTemperature = async () => {
+  const [temps, fanSpeed] = await Promise.all([
+    exec('/usr/sbin/frmw_ectool temps all'),
+    exec('/usr/sbin/frmw_ectool pwmgetfanrpm all'),
+  ]);
+  return `${escapeHTML(temps)}<br/>${fanSpeed}<br/>`;
+};
+
+async function getFanPoints() {
+  const fanPointsRaw = await exec('/usr/sbin/frmw_ectool thermalget');
+  const REGEX = /[ ]+\d+\s+\d+[^\n]+/g;
+  const fanPointsVals = (fanPointsRaw || '').match(REGEX);
+  const fanPoints = [];
+  if (fanPointsVals) {
+    for (const valuesRaw of fanPointsVals) {
+      const values = valuesRaw.trim().split(/\s+/);
+      const [id, warn, high, halt, fanOff, fanMax, name] = values;
+      if (+halt < 333 || +halt > 399) continue; // ignore (maybe) incorrect value
+      fanPoints.push({
+        id: +id, warn: +warn, high: +high, halt: +halt,
+        fanOff: +fanOff, fanMax: +fanMax,
+        name
+      });
+    } 
+  }
+  return fanPoints;
+}
+
 function start() {
   webServer.addMenuEntry('EC tool', '/ectool');
   webServer.app.get('/ectool', async (req, res) => {
@@ -188,6 +265,9 @@ function start() {
   });
   webServer.app.get('/ectool/kb', async (req, res) => {
     res.sendHtmlBody(getHTMLContentKB(), { title: 'Framework Keyboard Info' });
+  });
+  webServer.app.get('/ectool/temperature', async (req, res) => {
+    res.send(await getHTMLContentTemperature());
   });
   webServer.app.post('/ectool', (req, res) => {
     const { isChargingPaused } = ectool.getConfig();
@@ -206,6 +286,12 @@ function start() {
       const val = parseInt(body.value);
       lastFanSpeed = val;
       ectool.setFanDuty(val); delay = 1;
+    } else if (body.action === 'fan_point') {
+      const { id, warn, high, halt } = JSON.parse(body.sensor);
+      const fanOff = parseInt(body.fan_off);
+      const fanMax = parseInt(body.fan_max);
+      //console.log({ id, warn, high, halt, fanOff, fanMax });
+      ectool.setFanPoint({ id, warn, high, halt, fanOff, fanMax });
     } else if (body.action === 'led_funny') {
       ectool.funnyLEDDancing(!ectool.getFunnyLEDDancingStatus());
       delay = 1;
@@ -222,214 +308,5 @@ function start() {
     setTimeout(() => res.redirect(302, '/ectool'), delay);
   });
 }
-
-// https://www.howett.net/data/framework_matrix
-const KB_MATRIX = [
-  {byte0: '0', byte1: '0', key: 'c'},
-  {byte0: '1', byte1: '0', key: 'KP-'},
-  {byte0: '2', byte1: '0', key: 'KP+'},
-  {byte0: '3', byte1: '0', key: 'KP2'},
-  {byte0: '4', byte1: '0', key: 'KP3'},
-  {byte0: '5', byte1: '0', key: 'KP.'},
-  {byte0: '6', byte1: '0', key: 'KP1'},
-  {byte0: '7', byte1: '0', key: 'KP/'},
-  {byte0: '0', byte1: '1', key: 'Delete'},
-  {byte0: '1', byte1: '1', key: 'KP Ins'},
-  {byte0: '2', byte1: '1', key: 'KP9'},
-  {byte0: '3', byte1: '1', key: 'LMeta'},
-  {byte0: '4', byte1: '1', key: 'KP7'},
-  {byte0: '5', byte1: '1', key: 'Home'},
-  {byte0: '6', byte1: '1', key: 'Page Up'},
-  {byte0: '7', byte1: '1', key: 'Num Lock'},
-  {byte0: '0', byte1: '2', key: 'q'},
-  {byte0: '1', byte1: '2', key: 'KP0'},
-  {byte0: '2', byte1: '2', key: 'Fn'},
-  {byte0: '3', byte1: '2', key: 'Tab'},
-  {byte0: '4', byte1: '2', key: '`'},
-  {byte0: '5', byte1: '2', key: '1'},
-  {byte0: '6', byte1: '2', key: 'Muhenkan'},
-  {byte0: '7', byte1: '2', key: 'a'},
-  {byte0: '0', byte1: '3', key: 'RAlt'},
-  {byte0: '1', byte1: '3', key: 'LAlt'},
-  {byte0: '2', byte1: '3', key: ''},
-  {byte0: '3', byte1: '3', key: ''},
-  {byte0: '4', byte1: '3', key: ''},
-  {byte0: '5', byte1: '3', key: ''},
-  {byte0: '6', byte1: '3', key: ''},
-  {byte0: '7', byte1: '3', key: ''},
-  {byte0: '0', byte1: '4', key: 'KP Enter'},
-  {byte0: '1', byte1: '4', key: 'Space'},
-  {byte0: '2', byte1: '4', key: 'e'},
-  {byte0: '3', byte1: '4', key: 'Audio Prev  F4'},
-  {byte0: '4', byte1: '4', key: 'Caps Lock'},
-  {byte0: '5', byte1: '4', key: '3'},
-  {byte0: '6', byte1: '4', key: 'Vol. Up  F3'},
-  {byte0: '7', byte1: '4', key: 'Page Down'},
-  {byte0: '0', byte1: '5', key: 'x'},
-  {byte0: '1', byte1: '5', key: 'z'},
-  {byte0: '2', byte1: '5', key: 'Vol. Down  F2'},
-  {byte0: '3', byte1: '5', key: 'Mute  F1'},
-  {byte0: '4', byte1: '5', key: 's'},
-  {byte0: '5', byte1: '5', key: '2'},
-  {byte0: '6', byte1: '5', key: 'w'},
-  {byte0: '7', byte1: '5', key: 'Escape'},
-  {byte0: '0', byte1: '6', key: 'v'},
-  {byte0: '1', byte1: '6', key: 'b'},
-  {byte0: '2', byte1: '6', key: 'g'},
-  {byte0: '3', byte1: '6', key: 't'},
-  {byte0: '4', byte1: '6', key: '5'},
-  {byte0: '5', byte1: '6', key: '4'},
-  {byte0: '6', byte1: '6', key: 'r'},
-  {byte0: '7', byte1: '6', key: 'f'},
-  {byte0: '0', byte1: '7', key: 'm'},
-  {byte0: '1', byte1: '7', key: 'n'},
-  {byte0: '2', byte1: '7', key: 'h'},
-  {byte0: '3', byte1: '7', key: 'y'},
-  {byte0: '4', byte1: '7', key: '6'},
-  {byte0: '5', byte1: '7', key: '7'},
-  {byte0: '6', byte1: '7', key: 'u'},
-  {byte0: '7', byte1: '7', key: 'j'},
-  {byte0: '0', byte1: '8', key: '.'},
-  {byte0: '1', byte1: '8', key: 'Down'},
-  {byte0: '2', byte1: '8', key: '\\'},
-  {byte0: '3', byte1: '8', key: 'o'},
-  {byte0: '4', byte1: '8', key: 'RF Kill  F10'},
-  {byte0: '5', byte1: '8', key: '9'},
-  {byte0: '6', byte1: '8', key: 'PrtScr  F11'},
-  {byte0: '7', byte1: '8', key: 'l'},
-  {byte0: '0', byte1: '9', key: 'RShift'},
-  {byte0: '1', byte1: '9', key: 'LShift'},
-  {byte0: '2', byte1: '9', key: ''},
-  {byte0: '3', byte1: '9', key: ''},
-  {byte0: '4', byte1: '9', key: ''},
-  {byte0: '5', byte1: '9', key: ''},
-  {byte0: '6', byte1: '9', key: ''},
-  {byte0: '7', byte1: '9', key: ''},
-  {byte0: '0', byte1: 'a', key: ','},
-  {byte0: '1', byte1: 'a', key: 'KP*'},
-  {byte0: '2', byte1: 'a', key: 'Bright. Down  F7'},
-  {byte0: '3', byte1: 'a', key: 'Audio Next  F6'},
-  {byte0: '4', byte1: 'a', key: 'Play Pause  F5'},
-  {byte0: '5', byte1: 'a', key: '8'},
-  {byte0: '6', byte1: 'a', key: 'i'},
-  {byte0: '7', byte1: 'a', key: 'k'},
-  {byte0: '0', byte1: 'b', key: 'Katakana Hiragana'},
-  {byte0: '1', byte1: 'b', key: 'Henkan'},
-  {byte0: '2', byte1: 'b', key: 'KP8'},
-  {byte0: '3', byte1: 'b', key: 'Project  F9'},
-  {byte0: '4', byte1: 'b', key: 'Ro Kana'},
-  {byte0: '5', byte1: 'b', key: '102nd'},
-  {byte0: '6', byte1: 'b', key: 'Left'},
-  {byte0: '7', byte1: 'b', key: 'Menu'},
-  {byte0: '0', byte1: 'c', key: 'RCtrl'},
-  {byte0: '1', byte1: 'c', key: 'LCtrl'},
-  {byte0: '2', byte1: 'c', key: ''},
-  {byte0: '3', byte1: 'c', key: ''},
-  {byte0: '4', byte1: 'c', key: ''},
-  {byte0: '5', byte1: 'c', key: ''},
-  {byte0: '6', byte1: 'c', key: ''},
-  {byte0: '7', byte1: 'c', key: ''},
-  {byte0: '0', byte1: 'd', key: '/'},
-  {byte0: '1', byte1: 'd', key: 'Up'},
-  {byte0: '2', byte1: 'd', key: '-'},
-  {byte0: '3', byte1: 'd', key: 'Framework  F12'},
-  {byte0: '4', byte1: 'd', key: '0'},
-  {byte0: '5', byte1: 'd', key: 'p'},
-  {byte0: '6', byte1: 'd', key: '['},
-  {byte0: '7', byte1: 'd', key: ';'},
-  {byte0: '0', byte1: 'e', key: ''},
-  {byte0: '1', byte1: 'e', key: 'Enter'},
-  {byte0: '2', byte1: 'e', key: 'Scan Code e016'},
-  {byte0: '3', byte1: 'e', key: 'End'},
-  {byte0: '4', byte1: 'e', key: '='},
-  {byte0: '5', byte1: 'e', key: 'BS'},
-  {byte0: '6', byte1: 'e', key: ']'},
-  {byte0: '7', byte1: 'e', key: 'd'},
-  {byte0: '0', byte1: 'f', key: 'Yen'},
-  {byte0: '1', byte1: 'f', key: 'Bright. Up  F8'},
-  {byte0: '2', byte1: 'f', key: 'Right'},
-  {byte0: '3', byte1: 'f', key: 'Scan Code e01a'},
-  {byte0: '4', byte1: 'f', key: ''},
-  {byte0: '5', byte1: 'f', key: 'KP4'},
-  {byte0: '6', byte1: 'f', key: 'KP5'},
-  {byte0: '7', byte1: 'f', key: 'KP6'},
-].filter(
-  // skip blank keys and keypad
-  ({key}) => key.length > 0 && !key.startsWith('KP')
-);
-
-// https://github.com/FrameworkComputer/EmbeddedController/blob/hx30/include/keyboard_8042_sharedlib.h
-const SCANCODES = [
-  {name: 'SCANCODE_1', hex: '0x0016'},
-  {name: 'SCANCODE_2', hex: '0x001e'},
-  {name: 'SCANCODE_3', hex: '0x0026'},
-  {name: 'SCANCODE_4', hex: '0x0025'},
-  {name: 'SCANCODE_5', hex: '0x002e'},
-  {name: 'SCANCODE_6', hex: '0x0036'},
-  {name: 'SCANCODE_7', hex: '0x003d'},
-  {name: 'SCANCODE_8', hex: '0x003e'},
-  {name: 'SCANCODE_A', hex: '0x001c'},
-  {name: 'SCANCODE_B', hex: '0x0032'},
-  {name: 'SCANCODE_T', hex: '0x002c'},
-  {name: 'SCANCODE_F1', hex: '0x0005'},
-  {name: 'SCANCODE_F2', hex: '0x0006'},
-  {name: 'SCANCODE_F3', hex: '0x0004'},
-  {name: 'SCANCODE_F4', hex: '0x000c'},
-  {name: 'SCANCODE_F5', hex: '0x0003'},
-  {name: 'SCANCODE_F6', hex: '0x000b'},
-  {name: 'SCANCODE_F7', hex: '0x0083'},
-  {name: 'SCANCODE_F8', hex: '0x000a'},
-  {name: 'SCANCODE_F9', hex: '0x0001'},
-  {name: 'SCANCODE_F10', hex: '0x0009'},
-  {name: 'SCANCODE_F11', hex: '0x0078'},
-  {name: 'SCANCODE_F12', hex: '0x0007'},
-  {name: 'SCANCODE_F13', hex: '0x000f'},
-  {name: 'SCANCODE_F14', hex: '0x0017'},
-  {name: 'SCANCODE_F15', hex: '0x001f'},
-  {name: 'SCANCODE_BACK', hex: '0xe038'},
-  {name: 'SCANCODE_REFRESH', hex: '0xe020'},
-  {name: 'SCANCODE_FORWARD', hex: '0xe030'},
-  {name: 'SCANCODE_FULLSCREEN', hex: '0xe01d'},
-  {name: 'SCANCODE_OVERVIEW', hex: '0xe024'},
-  {name: 'SCANCODE_SNAPSHOT', hex: '0xe02d'},
-  {name: 'SCANCODE_BRIGHTNESS_DOWN', hex: '0xe02c'},
-  {name: 'SCANCODE_BRIGHTNESS_UP', hex: '0xe035'},
-  {name: 'SCANCODE_PRIVACY_SCRN_TOGGLE', hex: '0xe03c'},
-  {name: 'SCANCODE_VOLUME_MUTE', hex: '0xe023'},
-  {name: 'SCANCODE_VOLUME_DOWN', hex: '0xe021'},
-  {name: 'SCANCODE_VOLUME_UP', hex: '0xe032'},
-  {name: 'SCANCODE_KBD_BKLIGHT_DOWN', hex: '0xe043'},
-  {name: 'SCANCODE_KBD_BKLIGHT_UP', hex: '0xe044'},
-  {name: 'SCANCODE_NEXT_TRACK', hex: '0xe04d'},
-  {name: 'SCANCODE_PREV_TRACK', hex: '0xe015'},
-  {name: 'SCANCODE_PLAY_PAUSE', hex: '0xe054'},
-  {name: 'SCANCODE_UP', hex: '0xe075'},
-  {name: 'SCANCODE_DOWN', hex: '0xe072'},
-  {name: 'SCANCODE_LEFT', hex: '0xe06b'},
-  {name: 'SCANCODE_RIGHT', hex: '0xe074'},
-  {name: 'SCANCODE_LEFT_CTRL', hex: '0x0014'},
-  {name: 'SCANCODE_RIGHT_CTRL', hex: '0xe014'},
-  {name: 'SCANCODE_LEFT_ALT', hex: '0x0011'},
-  {name: 'SCANCODE_RIGHT_ALT', hex: '0xe011'},
-  {name: 'SCANCODE_LEFT_WIN', hex: '0xe01f'},
-  {name: 'SCANCODE_RIGHT_WIN', hex: '0xe027'},
-  {name: 'SCANCODE_MENU', hex: '0xe02f'},
-  {name: 'SCANCODE_POWER', hex: '0xe037'},
-  {name: 'SCANCODE_NUMLOCK', hex: '0x0077'},
-  {name: 'SCANCODE_CAPSLOCK', hex: '0x0058'},
-  {name: 'SCANCODE_SCROLL_LOCK', hex: '0x007e'},
-  {name: 'SCANCODE_CTRL_BREAK', hex: '0xe07e'},
-  {name: 'SCANCODE_RECOVERY', hex: '0xe076'},
-  {name: 'SCANCODE_FN', hex: '0x00ff'},
-  {name: 'SCANCODE_ESC', hex: '0x0076'},
-  {name: 'SCANCODE_DELETE', hex: '0xe071'},
-  {name: 'SCANCODE_K', hex: '0x0042'},
-  {name: 'SCANCODE_P', hex: '0x004D'},
-  {name: 'SCANCODE_S', hex: '0x001B'},
-  {name: 'SCANCODE_SPACE', hex: '0x0029'},
-].map(({name, hex}) => ({
-  name,
-  hex: hex.replace(/0x[0]{0,3}/, 'w'),
-}));
 
 module.exports = { start };

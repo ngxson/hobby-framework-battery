@@ -1,6 +1,7 @@
 const express = require('express');
 const app = express();
 const bodyParser = require('body-parser');
+const { LOGO_192 } = require('../constants');
 
 const powertop = require('./powertop');
 
@@ -16,6 +17,7 @@ function start() {
         <html>
         <head>
           <title>${options.title || 'Framework Battery Tuning'}</title>
+          <link rel="icon" type="image/png" sizes="192x192" href="${LOGO_192}" />
           <style>
             html {
               background: #222;
@@ -29,7 +31,7 @@ function start() {
           </style>
         </head>
         <body>
-            <h1>${options.title || 'Framework Battery Tuning'}</h1>
+            ${options.noTitle ? '' : `<h1>${options.title || 'Framework Battery Tuning'}</h1>`}
             ${html}
         </body>
         </html>

@@ -167,6 +167,26 @@ function getIsAvailable() {
   return isAvailable;
 }
 
+/**
+ * Default:
+sensor  warn   high   halt  fan_off fan_max   name
+  0        0   88°C   98°C     40°C    62°C   F75303_Local
+  1        0   88°C   98°C     40°C    69°C   F75303_CPU
+  2        0   87°C   97°C     40°C    62°C   F75303_DDR
+  3        0   50°C   60°C     40°C    50°C   Battery
+  4     95°C  103°C  105°C    104°C   105°C   PECI
+ */
+function setFanPoint({ id, warn, high, halt, fanOff, fanMax }) {
+  if (halt && high && halt >= 330 && high >= 320 && fanOff < fanMax) {
+    // thermalset sensor warn [high [shutdown [fan_off [fan_max]]]]
+    const cmd = `/usr/sbin/frmw_ectool thermalset ${id} ${warn} ${high} ${halt} ${fanOff} ${fanMax}`;
+    console.log(cmd);
+    exec(cmd);
+  } else {
+    throw new Error('setFanPoint: invalid data');
+  }
+}
+
 module.exports = {
   getIsAvailable,
   applySettings,
@@ -179,4 +199,5 @@ module.exports = {
   getFunnyLEDDancingStatus,
   setFanDuty,
   resetKeyboardMatrix,
+  setFanPoint,
 };

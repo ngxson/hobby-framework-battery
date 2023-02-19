@@ -12,8 +12,11 @@ In short, I want to do many things in only one process: monitoring battery, GUI 
 ## Install
 
 1. **Install dependencies**:  
-Ubuntu: `sudo apt install devmem2 msr-tools cgroup-tools powertop linux-tools-common`  
-Fedora: `sudo dnf install devmem2 msr-tools libcgroup-tools powertop`
+**Ubuntu**: `sudo apt install devmem2 msr-tools cgroup-tools powertop linux-tools-common`  
+.    
+If `devmem2` package is not found, enable universe and multiverse repository. See: https://askubuntu.com/questions/378558  
+.  
+**Fedora**: `sudo dnf install devmem2 msr-tools libcgroup-tools powertop`  
 
 2. **Install nodejs**: Depends on which distribution you're using, please search on Google. You can install any version from v14 (v16.10.0 is recommended). Verify with `node --version`
 
