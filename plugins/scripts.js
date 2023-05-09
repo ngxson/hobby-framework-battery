@@ -14,6 +14,7 @@ function run(name) {
     if (!fs.existsSync('/etc/frmw-scripts')) return;
     if (fs.existsSync(`/etc/frmw-scripts/${name}`)) {
       const _content = fs.readFileSync(`/etc/frmw-scripts/${name}`).toString();
+      console.log('scripts.run', name);
       eval(_content);
     }
   } catch (e) {

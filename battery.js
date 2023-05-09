@@ -87,7 +87,7 @@ async function onBatteryStatusChanged(callback) {
   }
 
   pyProcess.stdout.on('data', (data) => {
-    console.log('pyProcess', data.toString());
+    // console.log('pyProcess', data.toString());
     setTimeout(handler, 2000);
   });
 
