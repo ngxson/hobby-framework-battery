@@ -1,7 +1,46 @@
 const fs = require('fs');
 const exec = require('promised-exec');
+const { spawn } = require('child_process');
 
-const POWER_SUPPLY_PATH = '/tmp/power_supply';
+const UDEV_LISTEN_PYTHON_SCRIPT = `
+import os
+import socket
+
+NETLINK_KOBJECT_UEVENT = 15
+UEVENT_BUFFER_SIZE = 4096
+
+sock = socket\\
+    .socket(socket.AF_NETLINK, socket.SOCK_RAW, NETLINK_KOBJECT_UEVENT)
+sock.bind((os.getpid(), -1))
+
+print('READY', flush=True)
+
+while True:
+  data = sock.recv(UEVENT_BUFFER_SIZE)
+  try:
+    if data.startswith(b'libudev'):
+      continue
+    event = data.decode('utf-8').split('\\x00')
+    if len(event) < 3 or not event[0].startswith('change@'):
+      continue
+    if any('POWER_SUPPLY_NAME=ACAD' in s for s in event):
+      online = any('POWER_SUPPLY_ONLINE=1' in s for s in event)
+      if online:
+        print('POWER_SUPPLY_ONLINE=1', flush=True)
+      else:
+        print('POWER_SUPPLY_ONLINE=0', flush=True)
+  except Exception:
+    pass
+`;
+const PYTHON_EXEC_PATH = [
+  '/usr/bin/python',
+  '/usr/local/bin/python',
+  '/usr/sbin/python',
+  '/usr/local/sbin/python',
+  '/sbin/python',
+  '/bin/python',
+  '/opt/python/bin/python',
+].find(p => fs.existsSync(p));
 const CHARGING = 0;
 const DISCHARGING = 1;
 
@@ -27,36 +66,34 @@ function getPercent() {
 
 async function onBatteryStatusChanged(callback) {
   let lastStatus = -1;
-  exec('udevadm trigger -s power_supply');
 
   const handler = async () => {
-    if (fs.existsSync(POWER_SUPPLY_PATH)) {
+    try {
       const status = getStatus();
       if (status !== lastStatus) callback(status);
       lastStatus = status;
-    } else {
-      exec('sleep 3; udevadm trigger -s power_supply');
+    } catch (e) {
+      console.error(e);
     }
   };
 
-  // wait until we can watch
-  while (true) {
-    await delay(5000);
-    if (!fs.existsSync(POWER_SUPPLY_PATH)) continue;
-    let intervalId = null;
-    fs.watch(POWER_SUPPLY_PATH, () => {
-      // to make sure that the status is up-to-date, we re-run the check twice
-      setTimeout(handler, 2000);
-      setTimeout(handler, 10000);
-      if (intervalId !== null) {
-        clearInterval(intervalId);
-      }
-      // check periodically, for the case after hibernation
-      intervalId = setInterval(handler, 60000);
-    });
-    handler();
-    return;
+  let pyProcess;
+  if (PYTHON_EXEC_PATH) {
+    pyProcess = spawn(PYTHON_EXEC_PATH, ['-c', UDEV_LISTEN_PYTHON_SCRIPT])
+  } else {
+    const FALLBACK_PY_FILE_DIR = '/tmp/_frmw_udev.py'
+    fs.writeFileSync(FALLBACK_PY_FILE_DIR, UDEV_LISTEN_PYTHON_SCRIPT)
+    pyProcess = spawn('/bin/sh', ['-c', `python ${FALLBACK_PY_FILE_DIR}`]);
   }
+
+  pyProcess.stdout.on('data', (data) => {
+    console.log('pyProcess', data.toString());
+    setTimeout(handler, 2000);
+  });
+
+  pyProcess.stderr.on('data', (data) => {
+    console.error('pyProcess ERR', data.toString());
+  });
 }
 
 

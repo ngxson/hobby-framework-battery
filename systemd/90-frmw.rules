@@ -1,2 +1,0 @@
-SUBSYSTEM=="power_supply", ATTR{online}=="0", RUN+="/bin/sh -c 'echo 0 > /tmp/power_supply'"
-SUBSYSTEM=="power_supply", ATTR{online}=="1", RUN+="/bin/sh -c 'echo 1 > /tmp/power_supply'"

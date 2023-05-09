@@ -20,7 +20,9 @@ If `devmem2` package is not found, enable universe and multiverse repository. Se
 
 2. **Install nodejs**: Depends on which distribution you're using, please search on Google. You can install any version from v14 (v16.10.0 is recommended). Verify with `node --version`
 
-3. **Install the service**:  
+3. **Install python**: Most Linux distributions already come with python. All python version from 3.8 should work fine.
+
+4. **Install the service**:  
 ```
 npm i
 ./install.sh
@@ -55,7 +57,8 @@ To uninstall, simply run `./uninstall.sh` then reboot your laptop.
 - ~~Add option for forcing AC mode on battery~~
 - ~~Better algorithm for moving processes among cores~~
 - ~~Pause charging~~
-- Fan curve control
+- ~~Fan curve control~~
+- Docker version (simplify installation process)
 
 ## POCs
 
