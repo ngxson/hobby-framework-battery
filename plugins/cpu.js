@@ -146,7 +146,7 @@ async function setLowPowerMode(enabled) {
     shouldLimitCores = enabled && CPU.autoCoreLimit;
     await exec(`
       echo ${shouldLimitCores ? CPU.lowPowerCores : CPU.allCores} > /sys/fs/cgroup/cpuset/active_cores/cpuset.cpus;
-    `);
+    `).catch(() => {});
     reassignNewProcesses();
   }
 
@@ -154,7 +154,7 @@ async function setLowPowerMode(enabled) {
   const { PL1, PL2 } = enabled ? CPU.powerLimitsBattery : CPU.powerLimitsAC;
   exec(
     `/usr/sbin/set_power_limit ${PL1} ${PL2}`
-  );
+  ).catch(() => {});
 
   notification.send(
     `FRMW: ${enabled ? 'On battery' : 'Charging'}`,
