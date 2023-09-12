@@ -28,7 +28,7 @@ function start() {
   console.log('Service is running...');
   notification.send(
     'Framework Laptop Service is running',
-    'On browser: http://localhost:1515'
+    `On browser: http://localhost:${webServer.PORT}`
   );
   scripts.run(scripts.SCRIPT_ON_START);
   webServerCPU.start();

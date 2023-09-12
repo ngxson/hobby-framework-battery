@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 
 verifyAppInstalled() {
   toolName=$1
@@ -34,9 +34,11 @@ sudo cp ./bin/frmw_ectool /usr/sbin/frmw_ectool
 sudo chmod +x /usr/sbin/frmw_ectool
 
 # install systemd unit
-sudo cp ./systemd/frmw.service /etc/systemd/system/frmw.service
-sudo chmod 644 /etc/systemd/system/frmw.service
-sudo chown root:root /etc/systemd/system/frmw.service
-sudo systemctl daemon-reload
-sudo systemctl enable frmw.service
-sudo systemctl restart frmw.service
+if command -v "systemctl" > /dev/null 2>&1; then
+  sudo cp ./systemd/frmw.service /etc/systemd/system/frmw.service
+  sudo chmod 644 /etc/systemd/system/frmw.service
+  sudo chown root:root /etc/systemd/system/frmw.service
+  sudo systemctl daemon-reload
+  sudo systemctl enable frmw.service
+  sudo systemctl restart frmw.service
+fi

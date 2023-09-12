@@ -85,20 +85,18 @@ function getCPUModelConfig() {
 function setup() {
   if (CPU.pCores) {
     if (!fs.existsSync('/sys/fs/cgroup/cpuset')) {
+      console.error('/sys/fs/cgroup/cpuset does not exist, creating');
       exec(`
         mkdir /sys/fs/cgroup/cpuset;
         mount -t cgroup -o cpuset cpuset /sys/fs/cgroup/cpuset;
-
-        cgcreate -g cpuset:active_cores;
-        echo ${CPU.allCores} > /sys/fs/cgroup/cpuset/active_cores/cpuset.cpus;
-        echo 0 > /sys/fs/cgroup/cpuset/active_cores/cpuset.mems;
-        echo 1 > /sys/fs/cgroup/cpuset/active_cores/cgroup.clone_children;
-        for pid in $(ps -eLo pid); do
-          cgclassify -g cpuset:active_cores $pid 2>/dev/null;
-        done;
-      `).catch((e) => {
+      `).then(
+        makeCgroup()
+      ).catch((e) => {
         console.error(e);
       });
+    } else {
+      console.error('/sys/fs/cgroup/cpuset exist');
+      makeCgroup();
     }
 
     /**
@@ -108,6 +106,25 @@ function setup() {
     const REASSIGN_AFTER_MS = 60000; // every minute
     setInterval(reassignNewProcesses, REASSIGN_AFTER_MS);
   }
+}
+
+function makeCgroup() {
+  if (!fs.existsSync('/sys/fs/cgroup/cpuset/active_cores')) {
+    console.log('Creating cgroup active_cores');
+    return exec(`
+      cgcreate -g cpuset:active_cores;
+      echo ${CPU.allCores} > /sys/fs/cgroup/cpuset/active_cores/cpuset.cpus;
+      echo 0 > /sys/fs/cgroup/cpuset/active_cores/cpuset.mems;
+      echo 1 > /sys/fs/cgroup/cpuset/active_cores/cgroup.clone_children;
+      for pid in $(ps -eLo pid); do
+        cgclassify -g cpuset:active_cores $pid 2>/dev/null;
+      done;
+    `).catch((e) => {
+      // console.error(e);
+    });
+  } else {
+    return Promise.resolve();
+  } 
 }
 
 let lastReassignedPID = 1;

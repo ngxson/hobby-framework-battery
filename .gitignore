@@ -132,3 +132,5 @@ dist
 frmw-service
 bundle.js
 test.js
+
+docker/docker-compose.custom.yml

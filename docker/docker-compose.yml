@@ -1,0 +1,29 @@
+version: '3'
+
+services:
+  framework-battery:
+    container_name: framework-battery
+    build: 
+      context: ..
+      dockerfile: ./docker/Dockerfile
+    privileged: true
+    restart: unless-stopped
+    cap_add:
+      - ALL
+    cgroup: host
+    userns_mode: host
+    ipc: host
+    pid: host
+    security_opt:
+      - seccomp:unconfined
+    ports:
+      - 127.0.0.1:1515:1515
+    environment:
+      - USERNAME
+      - PORT=1515
+      - LISTEN_HOST=0.0.0.0
+    volumes:
+      - /sys/fs:/sys/fs
+      - /sys/class/powercap:/sys/class/powercap
+      - /etc/frmw-scripts:/etc/frmw-scripts
+      - /run/user:/run/user

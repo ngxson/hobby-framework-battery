@@ -1,6 +1,16 @@
 const fs = require('fs');
 
-const CFG_PATH = '/etc/frmw-service-config.json';
+const CFG_PATH = '/etc/frmw-scripts/config.json';
+
+if (!fs.existsSync('/etc/frmw-scripts')) {
+  fs.mkdirSync('/etc/frmw-scripts');
+}
+
+// migrate from old version
+if (fs.existsSync('/etc/frmw-service-config.json')) {
+  fs.renameSync('/etc/frmw-service-config.json', CFG_PATH);
+}
+
 let config = {
   cpu: {
     // lowPowerCores: '8-15',

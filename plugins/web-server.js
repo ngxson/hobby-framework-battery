@@ -5,7 +5,9 @@ const { LOGO_192 } = require('../constants');
 
 const powertop = require('./powertop');
 
-const PORT = 1515;
+const PORT = process.env.PORT || 1515;
+const LISTEN_HOST = process.env.LISTEN_HOST || '127.0.0.1';
+
 const menu = [
   {name: 'powertop --auto-tune', url: '/powertop-auto-tune'},
 ];
@@ -54,7 +56,7 @@ function start() {
     powertop.autoTune();
     res.sendHtmlBody('Complete', { title: 'powertop auto tune' });
   });
-  app.listen(PORT, '127.0.0.1', () => console.log(`Web server is up on port ${PORT}`));
+  app.listen(PORT, LISTEN_HOST, () => console.log(`Web server is up on port ${PORT}`));
 }
 
 function addMenuEntry(name, url) {
@@ -71,4 +73,5 @@ module.exports = {
   app,
   addMenuEntry,
   escapeHTML,
+  PORT,
 };
