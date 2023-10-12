@@ -27,3 +27,4 @@ services:
       - /sys/class/powercap:/sys/class/powercap
       - /etc/frmw-scripts:/etc/frmw-scripts
       - /run/user:/run/user
+      - /usr/bin:/host/usr/bin

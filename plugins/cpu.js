@@ -106,6 +106,11 @@ function setup() {
     const REASSIGN_AFTER_MS = 60000; // every minute
     setInterval(reassignNewProcesses, REASSIGN_AFTER_MS);
   }
+
+  // detect if we're inside docker ; if that's the case, use host's turbostat package
+  if (fs.existsSync('/host/usr/bin/turbostat')) {
+    fs.copyFileSync('/host/usr/bin/turbostat', '/usr/bin/turbostat')
+  }
 }
 
 function makeCgroup() {
